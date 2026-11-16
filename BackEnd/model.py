@@ -1,15 +1,20 @@
 from sqlalchemy.engine import default
 from sqlalchemy.testing.pickleable import User
 
-from BackEnd import app, db
+from BackEnd import app, db, len_password
 from sqlalchemy import Column, String, Float, Integer, Text, ForeignKey, Enum, Date, Double
 from sqlalchemy.orm import relationship
 from enum import Enum as UserEnum
+
+class BaseModel(db.Model):
+    __abstract__ = True
+    id = Column(Integer, primary_key=True,autoincrement=True)
 
 #Enum
 class CategoryGuest(UserEnum):
     DOMESTIC = 1
     FOREIGN = 2
+
 class EmployeeRole(UserEnum):
     USER = 1
     ADMIN = 2
@@ -20,15 +25,16 @@ class RoomState(UserEnum):
     MAINTENANCE = 3
     RESERVED = 4
 
-class BaseModel(db.Model):
-    __abstract__ = True
-    id = Column(Integer, primary_key=True)
-
 #Database Nhân Viên
 class Employee(BaseModel):
     __tablename__ = "employee"
     name = Column(String(50), nullable=False)
     role = Column(Enum(EmployeeRole), nullable=False, default=EmployeeRole.USER)
+
+    # -------Thông Tin Đăng Nhập-------
+    username = Column(String(50), nullable=False)
+    password = Column(String(len_password), nullable=False)
+
     # -------Thiết Lập Mối Quan Hệ-------
     #hóa đơn
     receipt = relationship('Receipt',backref='employee_id',lazy=True)
@@ -39,6 +45,10 @@ class Guest(BaseModel):
     name = Column(String(50), nullable=False)
     cccd = Column(String(15), nullable=False, unique=True)
     type = Column(String(20), nullable=False,default = CategoryGuest.DOMESTIC)
+    
+    # -------Thông Tin Đăng Nhập-------
+    username = Column(String(50), nullable=False)
+    password = Column(String(len_password), nullable=False)
 
     #-------Thiết Lập Mối Quan Hệ-------
     #phòng khách đang sử dụng
@@ -48,6 +58,10 @@ class Guest(BaseModel):
     #hóa đơn
     receipt = relationship('Receipt', backref='guest_id', lazy=True)
 
+#Databae Khách Hàng Nước Ngoài
+class Foreigner(Guest):
+    passport_number = Column(Integer, ForeignKey('guest.id'), nullable=False)
+    nationality = Column(String(50), nullable=False)
 
 #Database Phòng
 class Room(BaseModel):
@@ -67,6 +81,10 @@ class Room(BaseModel):
     ordered_ticket = relationship('OrderedRoomTicket',backref='room_id',lazy=True)
     #hóa đơn
     receipt = relationship('Receipt',backref='room_id',lazy=True)
+    #báo cáo tần suất sử dụng phòng
+    utilization_room = relationship('UtilizationRoomReport',backref='room_id',lazy=True)
+    #báo cáo doanh thu tháng
+    monthly_revenue = relationship('MonthlyRevenueReport',backref='room_id',lazy=True)
 
 #Database Khách Trong Phong
 class CurrentGuestInRoom(BaseModel):
@@ -78,23 +96,52 @@ class CurrentGuestInRoom(BaseModel):
 
 #Database Phiếu Đặt Phòng
 class OrderedRoomTicket(BaseModel):
-    # -------Khai Báo Khóa Ngoại-------
-    guest_id = Column(Integer, ForeignKey('guest.id'), nullable=False)
-    room_id = Column(Integer, ForeignKey('room.id'), nullable=False)
     #ngày nhận
     check_in_date = Column(Date, nullable=False)
     #ngày trả
     check_out_date = Column(Date, nullable=False)
 
+    # -------Khai Báo Khóa Ngoại-------
+    guest_id = Column(Integer, ForeignKey('guest.id'), nullable=False)
+    room_id = Column(Integer, ForeignKey('room.id'), nullable=False)
+
+
 #Database Hóa Đơn
 class Receipt(BaseModel):
     __tablename__ = "receipt"
+
+
     # -------Khai Báo Khóa Ngoại-------
     guest_id = Column(Integer, ForeignKey('guest.id'), nullable=False)
     employee_id = Column(Integer, ForeignKey('employee.id'), nullable=False)
     room_id = Column(Integer, ForeignKey('room.id'), nullable=False)
     check_in_date = Column(Date, nullable=False)
     check_out_date = Column(Date, nullable=False)
+
+#Database Báo Cáo Mật Độ Sử Dụng Phòng
+class UtilizationRoomReport(BaseModel):
+    __tablename__ = "utilizationRoomReport"
+    month = Column(Integer, nullable=False)
+    utilization = Column(Float, nullable=False)
+
+    # -------Khai Báo Khóa Ngoại-------
+    room_id = Column(Integer, ForeignKey('room.id'), nullable=False)
+
+#Database Báo Cáo Doanh Thu Tháng
+class MonthlyRevenueReport(BaseModel):
+    __tablename__ = "monthlyRevenueReport"
+    month = Column(Integer, nullable=False)
+    revenue = Column(Float, nullable=False)
+
+    # -------Thiết Lập Mối Quan Hệ-------
+    detail_monthly_revenue = relationship('DetailMonthlyRevenueReport',backref='monthly_revenue_id',lazy=True)
+
+
+#Database Báo Cáo Doanh Thu Tháng Chi Tiết
+class DetailMonthlyRevenueReport(BaseModel):
+    __tablename__ = "detailMonthlyRevenueReport"
+    monthly_revenue_report_id = Column(Integer, ForeignKey('monthlyRevenueReport.id'), nullable=False)
+    room_id = Column(Integer, ForeignKey('room.id'), nullable=False)
 
 
 if __name__ == "__main__":

@@ -5,3 +5,5 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:Mck28092006@localh
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 
 db = SQLAlchemy(app=app)
+
+len_password = 100
