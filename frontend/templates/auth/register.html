@@ -1,0 +1,164 @@
+{% extends "layouts/base_client.html" %}
+
+{% block title %}Đăng Ký Thành Viên - Grand Luxury{% endblock %}
+
+{% block content %}
+<div class="container auth-page-wrapper">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+            <div class="card card-luxury p-4 p-md-5 border-0 shadow-sm">
+                <div class="text-center mb-4">
+                    <span class="badge bg-white text-dark border rounded-pill px-3 py-1 mb-2 shadow-xs">Thành viên Grand Luxury</span>
+                    <h3 class="font-serif fw-bold mb-1">Tạo Tài Khoản</h3>
+                    <p class="text-muted small">Tạo tài khoản để đặt phòng nhanh chóng và quản lý lịch trình lưu trú.</p>
+                </div>
+
+                <form method="POST" action="{{ url_for('register') }}" id="registerForm" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="ho_ten" class="form-label small fw-medium text-muted">Họ và tên <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 border-subtle text-muted rounded-start-3">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input type="text" name="ho_ten" id="ho_ten" class="form-control form-control-luxury border-start-0 rounded-end-3" placeholder="Nhập họ và tên đầy đủ" required autocomplete="name">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="reg_username" class="form-label small fw-medium text-muted">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input type="text" name="username" id="reg_username" class="form-control form-control-luxury" placeholder="Nhập tên đăng nhập" required autocomplete="username">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cccd" class="form-label small fw-medium text-muted">Giấy tờ tùy thân <span class="text-danger">*</span></label>
+                            <input type="text" name="cccd" id="cccd" class="form-control form-control-luxury" placeholder="Nhập số CCCD/CMND/Hộ chiếu" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="dien_thoai" class="form-label small fw-medium text-muted">Điện thoại <span class="text-danger">*</span></label>
+                            <input type="tel" name="dien_thoai" id="dien_thoai" class="form-control form-control-luxury" placeholder="Nhập số điện thoại liên hệ" required autocomplete="tel">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="reg_email" class="form-label small fw-medium text-muted">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" id="reg_email" class="form-control form-control-luxury" placeholder="Nhập địa chỉ email" required autocomplete="email">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="reg_password" class="form-label small fw-medium text-muted">Mật khẩu <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="password" name="password" id="reg_password" class="form-control form-control-luxury border-end-0" placeholder="Nhập mật khẩu (từ 6 ký tự)" minlength="6" required autocomplete="new-password">
+                                <button class="btn btn-outline-secondary border-start-0 border-subtle bg-white text-muted rounded-end-3" type="button" id="toggleRegPassword" aria-label="Hiện hoặc ẩn mật khẩu">
+                                    <i class="bi bi-eye" id="eyeIconReg"></i>
+                                </button>
+                            </div>
+                            <div id="passwordLengthError" class="text-danger small mt-1 d-none">
+                                <i class="bi bi-exclamation-circle me-1"></i>Mật khẩu cần tối thiểu 6 ký tự
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="reg_confirm_password" class="form-label small fw-medium text-muted">Xác nhận <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="password" name="confirm_password" id="reg_confirm_password" class="form-control form-control-luxury border-end-0" placeholder="Xác nhận lại mật khẩu" minlength="6" required autocomplete="new-password">
+                                <button class="btn btn-outline-secondary border-start-0 border-subtle bg-white text-muted rounded-end-3" type="button" id="toggleRegConfirmPassword" aria-label="Hiện hoặc ẩn xác nhận mật khẩu">
+                                    <i class="bi bi-eye" id="eyeIconRegConfirm"></i>
+                                </button>
+                            </div>
+                            <div id="passwordMismatchError" class="text-danger small mt-1 d-none">
+                                <i class="bi bi-exclamation-circle me-1"></i>Mật khẩu xác nhận không khớp
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark-luxury w-100 py-2 mb-3 fw-medium" id="btnSubmitRegister">
+                        Tạo tài khoản
+                    </button>
+                </form>
+
+                <div class="text-center small text-muted">
+                    Đã có tài khoản? 
+                    <a href="{{ url_for('login') }}" class="text-dark fw-bold text-decoration-none">Đăng nhập tại đây</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+        function setupEyeToggle(btnId, inputId, iconId) {
+        const btn = document.getElementById(btnId);
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (!btn || !input || !icon) return;
+
+        btn.addEventListener('click', function () {
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            icon.classList.toggle('bi-eye', !isPassword);
+            icon.classList.toggle('bi-eye-slash', isPassword);
+        });
+    }
+
+    setupEyeToggle('toggleRegPassword', 'reg_password', 'eyeIconReg');
+    setupEyeToggle('toggleRegConfirmPassword', 'reg_confirm_password', 'eyeIconRegConfirm');
+
+        const regPassword = document.getElementById('reg_password');
+    const regConfirm = document.getElementById('reg_confirm_password');
+    const lengthError = document.getElementById('passwordLengthError');
+    const mismatchError = document.getElementById('passwordMismatchError');
+    const form = document.getElementById('registerForm');
+
+    function checkPasswordMatch() {
+        const pwd = regPassword.value;
+        const confirm = regConfirm.value;
+
+                lengthError.classList.toggle('d-none', pwd.length === 0 || pwd.length >= 6);
+
+                if (confirm.length > 0) {
+            const isMatch = (pwd === confirm);
+            mismatchError.classList.toggle('d-none', isMatch);
+            regConfirm.classList.toggle('is-invalid', !isMatch);
+            return isMatch;
+        }
+
+        mismatchError.classList.add('d-none');
+        regConfirm.classList.remove('is-invalid');
+        return false;
+    }
+
+    if (regPassword && regConfirm) {
+        regPassword.addEventListener('input', checkPasswordMatch);
+        regConfirm.addEventListener('input', checkPasswordMatch);
+    }
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            const pwd = regPassword.value;
+            const confirm = regConfirm.value;
+
+            if (pwd.length < 6) {
+                e.preventDefault();
+                lengthError.classList.remove('d-none');
+                regPassword.focus();
+                return;
+            }
+
+            if (pwd !== confirm) {
+                e.preventDefault();
+                mismatchError.classList.remove('d-none');
+                regConfirm.classList.add('is-invalid');
+                regConfirm.focus();
+                return;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

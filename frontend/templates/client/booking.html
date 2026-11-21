@@ -1,0 +1,863 @@
+{% extends "layouts/base_client.html" %}
+
+{% block title %}Đặt Phòng Lưu Trú - Grand Luxury Hotel & Resort{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{{ url_for('home') }}" class="text-decoration-none text-muted">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('home') }}#danh-sach-phong" class="text-decoration-none text-muted">Danh sách phòng</a></li>
+            <li class="breadcrumb-item active text-dark fw-semibold" aria-current="page">Phiếu đặt phòng</li>
+        </ol>
+    </nav>
+
+    {% if not session.get('user') %}
+    <div class="row justify-content-center py-5">
+        <div class="col-lg-6 col-md-8 text-center">
+            <div class="card card-luxury p-5 border-0 shadow-sm">
+                <div class="rounded-circle bg-light text-dark mx-auto d-flex align-items-center justify-content-center mb-4" style="width: 72px; height: 72px;">
+                    <i class="bi bi-person-lock fs-2"></i>
+                </div>
+                <h3 class="font-serif fw-bold mb-2">Đăng Nhập Để Tiếp Tục Đặt Phòng</h3>
+                <p class="text-muted fs-6 mb-4 leading-relaxed">
+                    Quý khách vui lòng đăng nhập tài khoản thành viên để hoàn tất phiếu đặt phòng, nhận ưu đãi độc quyền và quản lý kỳ nghỉ dễ dàng.
+                </p>
+                <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                    <a href="{{ url_for('login') }}" class="btn btn-dark-luxury px-4 py-2">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập ngay
+                    </a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-luxury px-4 py-2">
+                        Đăng ký thành viên
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <form id="bookingForm" method="POST" action="{{ url_for('client_booking') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="room_id" id="selectedRoomId" value="{{ phong.id if phong else 101 }}">
+        <input type="hidden" name="checkin_date" id="formCheckinDate">
+        <input type="hidden" name="checkout_date" id="formCheckoutDate">
+        <input type="hidden" name="guest_count" id="formGuestCount" value="1">
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div>
+                        <h1 class="font-serif fw-bold m-0 text-dark fs-2">Phiếu Đặt Phòng Trực Tuyến</h1>
+                        <p class="text-muted small m-0 mt-1">Xác nhận thông tin khách lưu trú và lịch trình nghỉ dưỡng</p>
+                    </div>
+                    <span class="badge bg-white text-dark border rounded-pill px-3 py-2 shadow-xs">
+                        <i class="bi bi-shield-check text-success me-1"></i>Bảo mật thông tin
+                    </span>
+                </div>
+
+                <div class="card card-luxury p-4 border-0 shadow-sm mb-4">
+                    <div class="d-flex align-items-center gap-3 mb-3 border-bottom pb-3">
+                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                            <i class="bi bi-person-check fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="font-serif fw-bold m-0">Thông Tin Người Liên Hệ</h5>
+                            <small class="text-muted">Thông tin nhận xác nhận đặt phòng và liên lạc từ khách sạn</small>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="booker_name" class="form-label small fw-medium text-muted">Họ và tên người đặt <span class="text-danger">*</span></label>
+                            <input type="text" name="booker_name" id="booker_name" class="form-control form-control-luxury" value="{{ session.user.get('ho_ten', '') }}" placeholder="Nhập họ và tên đầy đủ" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="booker_phone" class="form-label small fw-medium text-muted">Số điện thoại liên hệ <span class="text-danger">*</span></label>
+                            <input type="tel" name="booker_phone" id="booker_phone" class="form-control form-control-luxury" value="{{ session.user.get('dien_thoai', '') }}" placeholder="Nhập số điện thoại" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="booker_email" class="form-label small fw-medium text-muted">Địa chỉ email <span class="text-danger">*</span></label>
+                            <input type="email" name="booker_email" id="booker_email" class="form-control form-control-luxury" value="{{ session.user.get('email', '') }}" placeholder="Nhập địa chỉ email" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dateErrorAlert" class="alert alert-danger py-2 small d-none mb-3">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="dateErrorText"></span>
+                </div>
+
+                <div id="roomContainersList">
+                    <div class="card card-luxury p-4 border-0 shadow-sm mb-4 room-booking-card" data-room-index="0" data-room-id="{{ phong.id if phong else 101 }}">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom pb-3 mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                    <i class="bi bi-door-open fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="font-serif fw-bold m-0 room-title-display">
+                                        {% if phong %}{{ phong.ten_phong }} - Hạng {{ phong.loai_phong }}{% else %}Phòng 101 - Hạng A{% endif %}
+                                    </h5>
+                                    {% if phong and phong.get('khuyen_mai') and phong.khuyen_mai.get('dang_hoat_dong') %}
+                                        <small class="text-muted d-flex align-items-center flex-wrap gap-1 mt-1">
+                                            <span>Đơn giá:</span>
+                                            <span class="price-original">{{ phong.don_gia|vnd }}</span>
+                                            <span class="badge-promo">GIẢM {{ phong.khuyen_mai.phan_tram_giam }}%</span>
+                                            <span class="fw-bold price-promo price-tag room-rate-display" data-rate="{{ phong.khuyen_mai.gia_sau_giam }}">{{ "{:,.0f}".format(phong.khuyen_mai.gia_sau_giam) }}</span> VNĐ/đêm
+                                        </small>
+                                    {% else %}
+                                        {% set base_rate = phong.don_gia if phong else 2500000 %}
+                                        <small class="text-muted mt-1 d-block">Đơn giá niêm yết: <span class="fw-semibold text-dark price-tag room-rate-display" data-rate="{{ base_rate }}">{{ "{:,.0f}".format(base_rate) }}</span> VNĐ/đêm</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-light text-dark border">Phòng chính</span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4 p-3 bg-light rounded-4">
+                            <div class="col-md-5">
+                                <label for="checkin_date_0" class="form-label small fw-semibold text-dark mb-1">
+                                    <i class="bi bi-calendar-event me-1"></i>Ngày nhận phòng
+                                </label>
+                                <input type="date" id="checkin_date_0" class="form-control form-control-luxury checkin-date" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="checkout_date_0" class="form-label small fw-semibold text-dark mb-1">
+                                    <i class="bi bi-calendar-check me-1"></i>Ngày trả phòng
+                                </label>
+                                <input type="date" id="checkout_date_0" class="form-control form-control-luxury checkout-date" required>
+                            </div>
+                            <div class="col-md-2 d-flex flex-column justify-content-end">
+                                <span class="small text-muted mb-1">Thời gian:</span>
+                                <span class="fw-bold text-dark nights-count-badge">1 đêm</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="font-serif fw-bold m-0 text-dark">
+                                    <i class="bi bi-people me-1"></i>Khách lưu trú tại phòng này (Tối đa 3 khách)
+                                </h6>
+                                <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 btn-add-guest">
+                                    <i class="bi bi-plus-lg me-1"></i>Thêm khách
+                                </button>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input check-booker-primary" type="checkbox" id="checkBookerPrimary_0">
+                                <label class="form-check-label small text-muted" for="checkBookerPrimary_0">
+                                    Người đặt là khách lưu trú chính (Tự động điền khách 1)
+                                </label>
+                            </div>
+
+                            <div class="guest-list-container">
+                                <div class="guest-row border rounded-3 p-3 mb-2 bg-white" data-guest-index="0">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-auto">
+                                            <span class="badge bg-dark rounded-circle guest-stt" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">1</span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control form-control-sm guest-name" placeholder="Họ và tên khách" aria-label="Họ và tên khách" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select class="form-select form-select-sm guest-type" aria-label="Loại khách">
+                                                <option value="NoiDia" selected>Nội địa</option>
+                                                <option value="NuocNgoai">Nước ngoài</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control form-control-sm guest-id" placeholder="CCCD / Hộ chiếu" aria-label="CCCD hoặc Hộ chiếu" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control form-control-sm guest-address" placeholder="Địa chỉ cư trú" aria-label="Địa chỉ cư trú">
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="button" class="btn btn-sm text-danger btn-remove-guest p-1" title="Xóa khách" style="display: none;">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="guest-limit-alert text-danger small mt-2 d-none">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Quy định khách sạn: Mỗi phòng lưu trú tối đa 3 khách.
+                            </div>
+                        </div>
+
+                        <div class="border-top pt-3 d-flex flex-wrap justify-content-between align-items-center text-muted small">
+                            <div>
+                                <span>Tạm tính phòng: </span>
+                                <span class="fw-bold text-dark price-tag room-subtotal-display">0</span> VNĐ
+                                <span class="text-xs ms-1 room-breakdown-note"></span>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-light text-muted border">Phụ thu khách thứ 3 (25%) &amp; hệ số nước ngoài (x1.5)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-4">
+                    <button type="button" class="btn btn-outline-luxury px-4 py-2" id="btnAddAnotherRoom">
+                        <i class="bi bi-plus-circle me-2"></i>Thêm phòng khác vào phiếu đặt
+                    </button>
+                    <div class="text-muted mt-2" style="font-size: 0.8rem;">
+                        * Lưu ý: Mỗi phòng có danh sách khách, phụ thu và chi phí riêng biệt theo quy định khách sạn.
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card card-luxury p-4 border-0 shadow-sm sticky-top" style="top: 90px;">
+                    <h5 class="font-serif fw-bold mb-3 border-bottom pb-2">Tóm Tắt Đặt Phòng</h5>
+
+                    <div id="summaryRoomsList" class="mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Số lượng phòng:</span>
+                            <span class="fw-semibold text-dark" id="summaryRoomCount">1 phòng</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Tổng số đêm lưu trú:</span>
+                            <span class="fw-semibold text-dark" id="summaryTotalNights">1 đêm</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Tổng số khách:</span>
+                            <span class="fw-semibold text-dark" id="summaryTotalGuests">1 khách</span>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Tiền phòng cơ bản:</span>
+                            <span class="fw-semibold text-dark price-tag" id="summaryBasePrice">0 VNĐ</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Phụ thu khách thứ 3 (25%):</span>
+                            <span class="fw-semibold text-dark price-tag" id="summarySurcharge">0 VNĐ</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Hệ số khách nước ngoài (x1.5):</span>
+                            <span class="fw-semibold text-dark" id="summaryForeignCoeff">Áp dụng theo phòng</span>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-3 mb-4">
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <span class="fw-semibold text-muted fs-6">Tổng tiền dự kiến:</span>
+                            <span class="fs-4 price-tag" id="summaryGrandTotal">0 VNĐ</span>
+                        </div>
+                        <div class="text-muted mt-2 p-2 bg-light rounded-3" style="font-size: 0.75rem; line-height: 1.5;">
+                            <i class="bi bi-info-circle me-1 text-primary"></i>
+                            <strong>Lưu ý:</strong> Giá trên đã bao gồm thuế và phí dịch vụ. Hóa đơn chi tiết sẽ được cung cấp khi quý khách làm thủ tục nhận phòng.
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-dark-luxury w-100 py-3 mb-3 fw-medium" id="btnOpenBookingModal">
+                        <i class="bi bi-check-circle me-2"></i>Xác Nhận Đặt Phòng
+                    </button>
+
+                    <div class="text-center">
+                        <small class="text-muted">
+                            <i class="bi bi-telephone me-1"></i>Hỗ trợ đặt phòng: <a href="tel:19008888" class="text-dark fw-semibold text-decoration-none">1900 8888</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="modal fade" id="bookingPreviewModal" tabindex="-1" aria-labelledby="bookingPreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title font-serif fw-bold" id="bookingPreviewModalLabel">
+                        <i class="bi bi-calendar2-check me-2 text-dark"></i>Xác Nhận Phiếu Đặt Phòng
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">
+                        Quý khách vui lòng kiểm tra lại thông tin tóm tắt phiếu đặt phòng trước khi hoàn tất:
+                    </p>
+
+                    <div class="p-3 bg-light rounded-3 mb-0" id="modalBookingSummaryContent">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Chỉnh sửa</button>
+                    <button type="button" class="btn btn-dark-luxury px-4" id="btnConfirmBookingPreview">Hoàn tất đặt phòng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script id="dsPhongTrongData" type="application/json">
+{{ ds_phong_trong|tojson if ds_phong_trong else '[]' }}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const roomContainersList = document.getElementById('roomContainersList');
+    if (!roomContainersList) return;
+
+    function getLocalDateString(d) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    const todayStr = getLocalDateString(today);
+    const tomorrowStr = getLocalDateString(tomorrow);
+
+    const firstCheckin = document.querySelector('.checkin-date');
+    const firstCheckout = document.querySelector('.checkout-date');
+    if (firstCheckin) {
+        firstCheckin.min = todayStr;
+        if (!firstCheckin.value) firstCheckin.value = todayStr;
+    }
+    if (firstCheckout) {
+        firstCheckout.min = tomorrowStr;
+        if (!firstCheckout.value) firstCheckout.value = tomorrowStr;
+    }
+
+    function formatVND(amount) {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(amount));
+    }
+
+    function validateDates() {
+        const checkinInput = document.querySelector('.checkin-date');
+        const checkoutInput = document.querySelector('.checkout-date');
+        const dateErrorAlert = document.getElementById('dateErrorAlert');
+        const dateErrorText = document.getElementById('dateErrorText');
+        const btnOpenModal = document.getElementById('btnOpenBookingModal');
+
+        if (!checkinInput || !checkoutInput) return true;
+
+        const inVal = checkinInput.value;
+        const outVal = checkoutInput.value;
+
+        if (!inVal || !outVal) {
+            if (dateErrorAlert) dateErrorAlert.classList.add('d-none');
+            return false;
+        }
+
+        if (inVal < todayStr) {
+            if (dateErrorAlert) {
+                dateErrorText.textContent = 'Ngày nhận phòng không được ở trong quá khứ.';
+                dateErrorAlert.classList.remove('d-none');
+            }
+            if (btnOpenModal) btnOpenModal.disabled = true;
+            return false;
+        }
+
+        if (outVal <= inVal) {
+            if (dateErrorAlert) {
+                dateErrorText.textContent = 'Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 đêm.';
+                dateErrorAlert.classList.remove('d-none');
+            }
+            if (btnOpenModal) btnOpenModal.disabled = true;
+            return false;
+        }
+
+        const d1 = new Date(inVal);
+        const d2 = new Date(outVal);
+        const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 28) {
+            if (dateErrorAlert) {
+                dateErrorText.textContent = 'Thời gian lưu trú tối đa cho mỗi lượt đặt phòng là 28 ngày.';
+                dateErrorAlert.classList.remove('d-none');
+            }
+            if (btnOpenModal) btnOpenModal.disabled = true;
+            return false;
+        }
+
+        if (dateErrorAlert) dateErrorAlert.classList.add('d-none');
+        if (btnOpenModal) btnOpenModal.disabled = false;
+        return true;
+    }
+
+    function calculateRoomSubtotal(roomCard) {
+        const rateDisplay = roomCard.querySelector('.room-rate-display');
+        const unitRate = parseFloat(rateDisplay ? rateDisplay.dataset.rate || 1500000 : 1500000);
+
+        const inDate = roomCard.querySelector('.checkin-date').value;
+        const outDate = roomCard.querySelector('.checkout-date').value;
+
+        let nights = 1;
+        if (inDate && outDate) {
+            const d1 = new Date(inDate);
+            const d2 = new Date(outDate);
+            const diff = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+            nights = diff > 0 ? diff : 0;
+        }
+
+        const nightsBadge = roomCard.querySelector('.nights-count-badge');
+        if (nightsBadge) {
+            nightsBadge.textContent = nights > 0 ? nights + ' đêm' : 'Ngày không hợp lệ';
+        }
+
+        const guestRows = roomCard.querySelectorAll('.guest-row');
+        const guestCount = guestRows.length;
+
+        if (nights <= 0) {
+            return { nights: 0, guests: guestCount, totalPrice: 0, basePrice: 0, surchargeAmount: 0, foreignCoeff: 1.0, total: 0 };
+        }
+
+        const basePrice = unitRate * nights;
+        const hasThirdGuest = guestCount >= 3;
+        const surchargeRate = hasThirdGuest ? 0.25 : 0;
+        const surchargeAmount = basePrice * surchargeRate;
+
+        let hasForeign = false;
+        guestRows.forEach(row => {
+            const typeSelect = row.querySelector('.guest-type');
+            if (typeSelect && typeSelect.value === 'NuocNgoai') {
+                hasForeign = true;
+            }
+        });
+
+        const foreignCoeff = hasForeign ? 1.5 : 1.0;
+        const roomTotal = (basePrice + surchargeAmount) * foreignCoeff;
+
+        const subtotalEl = roomCard.querySelector('.room-subtotal-display');
+        if (subtotalEl) subtotalEl.textContent = formatVND(roomTotal);
+
+        const noteEl = roomCard.querySelector('.room-breakdown-note');
+        if (noteEl) {
+            let note = '(' + nights + ' đêm';
+            if (hasThirdGuest) note += ', +25% khách 3';
+            if (hasForeign) note += ', x1.5 khách nước ngoài';
+            note += ')';
+            noteEl.textContent = note;
+        }
+
+        return {
+            nights: nights,
+            guests: guestCount,
+            basePrice: basePrice,
+            surchargeAmount: surchargeAmount,
+            foreignCoeff: foreignCoeff,
+            total: roomTotal
+        };
+    }
+
+    function updateGrandSummary() {
+        validateDates();
+
+        const roomCards = document.querySelectorAll('.room-booking-card');
+        let totalRooms = roomCards.length;
+        let totalNights = 0;
+        let totalGuests = 0;
+        let totalBase = 0;
+        let totalSurcharge = 0;
+        let grandTotal = 0;
+
+        roomCards.forEach(card => {
+            const res = calculateRoomSubtotal(card);
+            totalNights += res.nights;
+            totalGuests += res.guests;
+            totalBase += res.basePrice;
+            totalSurcharge += res.surchargeAmount;
+            grandTotal += res.total;
+        });
+
+        const roomCountEl = document.getElementById('summaryRoomCount');
+        const nightsCountEl = document.getElementById('summaryTotalNights');
+        const guestCountEl = document.getElementById('summaryTotalGuests');
+        const baseEl = document.getElementById('summaryBasePrice');
+        const surchargeEl = document.getElementById('summarySurcharge');
+        const grandEl = document.getElementById('summaryGrandTotal');
+
+        if (roomCountEl) roomCountEl.textContent = totalRooms + ' phòng';
+        if (nightsCountEl) nightsCountEl.textContent = totalNights + ' đêm';
+        if (guestCountEl) guestCountEl.textContent = totalGuests + ' khách';
+        if (baseEl) baseEl.textContent = formatVND(totalBase) + ' VNĐ';
+        if (surchargeEl) surchargeEl.textContent = formatVND(totalSurcharge) + ' VNĐ';
+        if (grandEl) grandEl.textContent = formatVND(grandTotal) + ' VNĐ';
+
+        const formCheckin = document.getElementById('formCheckinDate');
+        const formCheckout = document.getElementById('formCheckoutDate');
+        const formGuest = document.getElementById('formGuestCount');
+        const checkinInput = document.querySelector('.checkin-date');
+        const checkoutInput = document.querySelector('.checkout-date');
+
+        if (formCheckin && checkinInput) formCheckin.value = checkinInput.value;
+        if (formCheckout && checkoutInput) formCheckout.value = checkoutInput.value;
+        if (formGuest) formGuest.value = totalGuests;
+    }
+
+    function bindRoomCardEvents(roomCard) {
+        const inInput = roomCard.querySelector('.checkin-date');
+        const outInput = roomCard.querySelector('.checkout-date');
+        const btnAddGuest = roomCard.querySelector('.btn-add-guest');
+        const guestContainer = roomCard.querySelector('.guest-list-container');
+        const checkBooker = roomCard.querySelector('.check-booker-primary');
+        const guestLimitAlert = roomCard.querySelector('.guest-limit-alert');
+
+        if (inInput) {
+            inInput.addEventListener('change', function () {
+                if (outInput) {
+                    const nextDay = new Date(inInput.value);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    outInput.min = getLocalDateString(nextDay);
+                    if (outInput.value && outInput.value <= inInput.value) {
+                        outInput.value = getLocalDateString(nextDay);
+                    }
+                }
+                updateGrandSummary();
+            });
+        }
+        if (outInput) outInput.addEventListener('change', updateGrandSummary);
+
+        if (checkBooker) {
+            checkBooker.addEventListener('change', function () {
+                const firstGuestRow = guestContainer.querySelector('.guest-row');
+                if (!firstGuestRow) return;
+
+                const nameInput = firstGuestRow.querySelector('.guest-name');
+                const bookerName = document.getElementById('booker_name').value;
+
+                if (this.checked) {
+                    nameInput.value = bookerName || '';
+                } else {
+                    nameInput.value = '';
+                }
+            });
+        }
+
+        if (btnAddGuest && guestContainer) {
+            btnAddGuest.addEventListener('click', function () {
+                const currentRows = guestContainer.querySelectorAll('.guest-row');
+                if (currentRows.length >= 3) {
+                    if (guestLimitAlert) guestLimitAlert.classList.remove('d-none');
+                    return;
+                }
+                if (guestLimitAlert) guestLimitAlert.classList.add('d-none');
+
+                const newIdx = currentRows.length;
+                const newRow = document.createElement('div');
+                newRow.className = 'guest-row border rounded-3 p-3 mb-2 bg-white';
+                newRow.dataset.guestIndex = newIdx;
+
+                newRow.innerHTML = `
+                    <div class="row g-2 align-items-center">
+                        <div class="col-auto">
+                            <span class="badge bg-dark rounded-circle guest-stt" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">${newIdx + 1}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm guest-name" placeholder="Họ và tên khách" aria-label="Họ và tên khách" required>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm guest-type" aria-label="Loại khách">
+                                <option value="NoiDia" selected>Nội địa</option>
+                                <option value="NuocNgoai">Nước ngoài</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm guest-id" placeholder="CCCD / Hộ chiếu" aria-label="CCCD hoặc Hộ chiếu" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm guest-address" placeholder="Địa chỉ cư trú" aria-label="Địa chỉ cư trú">
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-sm text-danger btn-remove-guest p-1" title="Xóa khách">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                guestContainer.appendChild(newRow);
+
+                const btnRemove = newRow.querySelector('.btn-remove-guest');
+                if (btnRemove) {
+                    btnRemove.addEventListener('click', function () {
+                        newRow.remove();
+                        reindexGuests(guestContainer);
+                        updateGrandSummary();
+                    });
+                }
+
+                const guestTypeSelect = newRow.querySelector('.guest-type');
+                if (guestTypeSelect) {
+                    guestTypeSelect.addEventListener('change', updateGrandSummary);
+                }
+
+                updateGrandSummary();
+            });
+        }
+    }
+
+    function reindexGuests(container) {
+        const rows = container.querySelectorAll('.guest-row');
+        rows.forEach((r, idx) => {
+            r.dataset.guestIndex = idx;
+            const sttBadge = r.querySelector('.guest-stt');
+            if (sttBadge) sttBadge.textContent = idx + 1;
+        });
+    }
+
+    const firstCard = document.querySelector('.room-booking-card');
+    if (firstCard) bindRoomCardEvents(firstCard);
+
+    let rawDataEl = document.getElementById('dsPhongTrongData');
+    let availableRooms = [];
+    if (rawDataEl) {
+        try {
+            availableRooms = JSON.parse(rawDataEl.textContent);
+        } catch (e) {
+            availableRooms = [];
+        }
+    }
+
+    const btnAddRoom = document.getElementById('btnAddAnotherRoom');
+    if (btnAddRoom && roomContainersList) {
+        btnAddRoom.addEventListener('click', function () {
+            const currentCards = document.querySelectorAll('.room-booking-card');
+            const roomIdx = currentCards.length;
+
+            let extraRoom = availableRooms[roomIdx - 1];
+            if (!extraRoom && availableRooms.length > 0) {
+                extraRoom = availableRooms[0];
+            }
+
+            const roomName = extraRoom ? extraRoom.ten_phong : `Phòng Phụ ${roomIdx + 1}`;
+            const roomType = extraRoom ? extraRoom.loai_phong : 'B';
+            const roomRate = extraRoom ? extraRoom.don_gia : 1500000;
+            const roomId = extraRoom ? extraRoom.id : 201;
+
+            const newRoomCard = document.createElement('div');
+            newRoomCard.className = 'card card-luxury p-4 border-0 shadow-sm mb-4 room-booking-card';
+            newRoomCard.dataset.roomIndex = roomIdx;
+            newRoomCard.dataset.roomId = roomId;
+
+            newRoomCard.innerHTML = `
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom pb-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                            <i class="bi bi-door-open fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="font-serif fw-bold m-0 room-title-display">${roomName} - Hạng ${roomType}</h5>
+                            <small class="text-muted mt-1 d-block">Đơn giá niêm yết: <span class="fw-semibold text-dark price-tag room-rate-display" data-rate="${roomRate}">${formatVND(roomRate)}</span> VNĐ/đêm</small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark border">Phòng #${roomIdx + 1}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle p-1 btn-remove-room" title="Xóa phòng này" style="width: 28px; height: 28px;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4 p-3 bg-light rounded-4">
+                    <div class="col-md-5">
+                        <label for="checkin_date_${roomIdx}" class="form-label small fw-semibold text-dark mb-1">
+                            <i class="bi bi-calendar-event me-1"></i>Ngày nhận phòng
+                        </label>
+                        <input type="date" id="checkin_date_${roomIdx}" class="form-control form-control-luxury checkin-date" value="${todayStr}" min="${todayStr}" required>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="checkout_date_${roomIdx}" class="form-label small fw-semibold text-dark mb-1">
+                            <i class="bi bi-calendar-check me-1"></i>Ngày trả phòng
+                        </label>
+                        <input type="date" id="checkout_date_${roomIdx}" class="form-control form-control-luxury checkout-date" value="${tomorrowStr}" min="${tomorrowStr}" required>
+                    </div>
+                    <div class="col-md-2 d-flex flex-column justify-content-end">
+                        <span class="small text-muted mb-1">Thời gian:</span>
+                        <span class="fw-bold text-dark nights-count-badge">1 đêm</span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="font-serif fw-bold m-0 text-dark">
+                            <i class="bi bi-people me-1"></i>Khách lưu trú tại phòng này (Tối đa 3 khách)
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 btn-add-guest">
+                            <i class="bi bi-plus-lg me-1"></i>Thêm khách
+                        </button>
+                    </div>
+
+                    <div class="guest-list-container">
+                        <div class="guest-row border rounded-3 p-3 mb-2 bg-white" data-guest-index="0">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto">
+                                    <span class="badge bg-dark rounded-circle guest-stt" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">1</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control form-control-sm guest-name" placeholder="Họ và tên khách" aria-label="Họ và tên khách" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select form-select-sm guest-type" aria-label="Loại khách">
+                                        <option value="NoiDia" selected>Nội địa</option>
+                                        <option value="NuocNgoai">Nước ngoài</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control form-control-sm guest-id" placeholder="CCCD / Hộ chiếu" aria-label="CCCD hoặc Hộ chiếu" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control form-control-sm guest-address" placeholder="Địa chỉ cư trú" aria-label="Địa chỉ cư trú">
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-sm text-danger btn-remove-guest p-1" title="Xóa khách" style="display: none;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-top pt-3 d-flex flex-wrap justify-content-between align-items-center text-muted small">
+                    <div>
+                        <span>Tạm tính phòng: </span>
+                        <span class="fw-bold text-dark price-tag room-subtotal-display">0</span> VNĐ
+                        <span class="text-xs ms-1 room-breakdown-note"></span>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-light text-muted border">Phụ thu khách thứ 3 (25%) &amp; hệ số nước ngoài (x1.5)</span>
+                    </div>
+                </div>
+            `;
+
+            roomContainersList.appendChild(newRoomCard);
+            bindRoomCardEvents(newRoomCard);
+
+            const btnRemoveRoom = newRoomCard.querySelector('.btn-remove-room');
+            if (btnRemoveRoom) {
+                btnRemoveRoom.addEventListener('click', function () {
+                    newRoomCard.remove();
+                    updateGrandSummary();
+                });
+            }
+
+            updateGrandSummary();
+        });
+    }
+
+    const btnOpenModal = document.getElementById('btnOpenBookingModal');
+    const previewModalEl = document.getElementById('bookingPreviewModal');
+    const modalSummaryContent = document.getElementById('modalBookingSummaryContent');
+
+    if (btnOpenModal && previewModalEl && modalSummaryContent) {
+        btnOpenModal.addEventListener('click', function () {
+            if (!validateDates()) return;
+
+            const bookerName = document.getElementById('booker_name').value.trim();
+            const bookerPhone = document.getElementById('booker_phone').value.trim();
+            const bookerEmail = document.getElementById('booker_email').value.trim();
+
+            if (!bookerName || !bookerPhone) {
+                alert('Vui lòng điền đầy đủ họ tên và số điện thoại người liên hệ đặt phòng.');
+                return;
+            }
+
+            // Xay dung DOM an toan chong XSS (khong dung innerHTML chen chuoi chua escape)
+            modalSummaryContent.textContent = '';
+
+            const bookerDiv = document.createElement('div');
+            bookerDiv.className = 'mb-2';
+            const bookerLabel = document.createElement('span');
+            bookerLabel.className = 'text-muted';
+            bookerLabel.textContent = 'Người đặt: ';
+            const bookerBold = document.createElement('strong');
+            bookerBold.textContent = bookerName;
+            const bookerPhoneSpan = document.createElement('span');
+            bookerPhoneSpan.textContent = ` (${bookerPhone})`;
+            bookerDiv.appendChild(bookerLabel);
+            bookerDiv.appendChild(bookerBold);
+            bookerDiv.appendChild(bookerPhoneSpan);
+            modalSummaryContent.appendChild(bookerDiv);
+
+            const emailDiv = document.createElement('div');
+            emailDiv.className = 'mb-3';
+            const emailLabel = document.createElement('span');
+            emailLabel.className = 'text-muted';
+            emailLabel.textContent = 'Email: ';
+            const emailText = document.createTextNode(bookerEmail || 'Chưa cung cấp');
+            emailDiv.appendChild(emailLabel);
+            emailDiv.appendChild(emailText);
+            modalSummaryContent.appendChild(emailDiv);
+
+            const roomsContainer = document.createElement('div');
+            roomsContainer.className = 'mb-2';
+
+            const roomCards = document.querySelectorAll('.room-booking-card');
+            roomCards.forEach((c, idx) => {
+                const title = c.querySelector('.room-title-display').textContent.trim();
+                const nights = c.querySelector('.nights-count-badge').textContent.trim();
+                const subtotal = c.querySelector('.room-subtotal-display').textContent.trim();
+                const guests = c.querySelectorAll('.guest-row').length;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'd-flex justify-content-between align-items-center py-1 border-bottom border-light';
+
+                const leftCol = document.createElement('div');
+                const titleEl = document.createElement('strong');
+                titleEl.textContent = `Phòng ${idx + 1}: ${title}`;
+                const subText = document.createElement('div');
+                subText.className = 'text-muted';
+                subText.style.fontSize = '0.8rem';
+                subText.textContent = `${nights} • ${guests} khách`;
+                leftCol.appendChild(titleEl);
+                leftCol.appendChild(subText);
+
+                const rightCol = document.createElement('span');
+                rightCol.className = 'fw-semibold text-dark price-tag';
+                rightCol.textContent = `${subtotal} VNĐ`;
+
+                itemDiv.appendChild(leftCol);
+                itemDiv.appendChild(rightCol);
+                roomsContainer.appendChild(itemDiv);
+            });
+            modalSummaryContent.appendChild(roomsContainer);
+
+            const grandTotal = document.getElementById('summaryGrandTotal').textContent;
+            const totalDiv = document.createElement('div');
+            totalDiv.className = 'd-flex justify-content-between align-items-center pt-2 fw-bold border-top border-2 mt-2';
+            const totalLabel = document.createElement('span');
+            totalLabel.className = 'text-dark';
+            totalLabel.textContent = 'Tổng tiền dự kiến:';
+            const totalValue = document.createElement('span');
+            totalValue.className = 'fs-5 text-dark price-tag';
+            totalValue.textContent = grandTotal;
+            totalDiv.appendChild(totalLabel);
+            totalDiv.appendChild(totalValue);
+            modalSummaryContent.appendChild(totalDiv);
+
+            const modal = new bootstrap.Modal(previewModalEl);
+            modal.show();
+        });
+    }
+
+    const btnConfirmBooking = document.getElementById('btnConfirmBookingPreview');
+    if (btnConfirmBooking && previewModalEl) {
+        btnConfirmBooking.addEventListener('click', function () {
+            const modalInstance = bootstrap.Modal.getInstance(previewModalEl);
+            if (modalInstance) modalInstance.hide();
+
+            const form = document.getElementById('bookingForm');
+            if (form) {
+                form.submit();
+            }
+        });
+    }
+
+    updateGrandSummary();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends "layouts/base_admin.html" %}
+
+{% block title %}Thanh Toán Tại Quầy - Grand Luxury{% endblock %}
+{% block page_title %}Lập Hóa Đơn &amp; Thanh Toán Tại Quầy Lễ Tân{% endblock %}
+{% block banner_title %}Lập Hóa Đơn &amp; Thanh Toán Tại Quầy{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column gap-4">
+        <div class="card card-luxury p-4 shadow-sm">
+        <h6 class="font-serif fw-bold mb-3">Tra Cứu Phòng Cần Thanh Toán</h6>
+        <form method="GET" action="{{ url_for('staff_payment') }}" class="row g-2">
+            <div class="col-md-6 col-lg-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted rounded-start-3">
+                        <i class="bi bi-door-closed"></i>
+                    </span>
+                    <input type="text" name="so_phong" value="{{ so_phong_tim }}" class="form-control form-control-luxury border-start-0" placeholder="Nhập số phòng (Ví dụ: 101, 201, 301)..." required>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-dark-luxury px-4">
+                    <i class="bi bi-search me-1"></i> Tra Cứu Phiếu Thuê
+                </button>
+            </div>
+        </form>
+    </div>
+
+        {% if phieu and chi_tiet %}
+        <div class="card card-luxury p-4 p-md-5 shadow-sm border border-warning border-opacity-25">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <span class="badge bg-dark rounded-pill px-3 py-1 text-white mb-2">Mã Phiếu: {{ phieu.ma_phieu }}</span>
+                    <h3 class="font-serif fw-bold m-0">{{ phieu.ten_phong }} - Loại {{ phieu.loai_phong }}</h3>
+                    <small class="text-muted">Đơn giá: {{ phieu.don_gia|vnd }}/ngày &bull; Khách đại diện: <strong>{{ phieu.nguoi_lap }}</strong></small>
+                </div>
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-2">
+                    <i class="bi bi-hourglass-split me-1"></i> Chưa Thanh Toán
+                </span>
+            </div>
+
+            <div class="row g-4 mb-4">
+                                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-4 text-center">
+                        <small class="text-muted d-block">Ngày nhận phòng</small>
+                        <span class="fw-semibold">{{ phieu.ngay_nhan }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-4 text-center">
+                        <small class="text-muted d-block">Ngày trả phòng</small>
+                        <span class="fw-semibold">{{ phieu.ngay_tra }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-4 text-center">
+                        <small class="text-muted d-block">Số ngày thuê</small>
+                        <span class="fw-bold">{{ phieu.so_ngay }} ngày</span>
+                    </div>
+                </div>
+            </div>
+
+                        <div class="mb-4">
+                <h6 class="font-serif fw-bold mb-2">Danh Sách Khách Ở Trong Phòng ({{ phieu.ds_khach|length }}/3 khách)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered m-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 40px;">STT</th>
+                                <th>Khách Hàng</th>
+                                <th>Loại Khách</th>
+                                <th>CMND / Hộ Chiếu</th>
+                                <th>Địa Chỉ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for k in phieu.ds_khach %}
+                                <tr>
+                                    <td class="text-center">{{ k.stt }}</td>
+                                    <td class="fw-semibold">{{ k.ho_ten }}</td>
+                                    <td>
+                                        {% if k.loai_khach == 'NUOC_NGOAI' %}
+                                            <span class="badge bg-primary rounded-pill">Nước Ngoài</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary rounded-pill">Nội Địa</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ k.cmnd }}</td>
+                                    <td>{{ k.dia_chi }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+                        <div class="p-4 bg-light rounded-4 mb-4">
+                <h6 class="font-serif fw-bold mb-3 border-bottom pb-2">Bóc Tách Chi Phí Hóa Đơn Tại Quầy</h6>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">1. Tiền phòng cơ bản ({{ phieu.so_ngay }} ngày):</span>
+                    <span class="fw-semibold">{{ chi_tiet.tien_co_ban|vnd }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">
+                        2. Phụ thu khách thứ 3 (+25%):
+                        {% if chi_tiet.co_phu_thu %}<small class="text-info">(Phòng có 3 khách)</small>{% endif %}
+                    </span>
+                    <span class="fw-semibold">
+                        {% if chi_tiet.co_phu_thu %}+ {{ chi_tiet.tien_phu_thu|vnd }}{% else %}0 đ{% endif %}
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-muted">
+                        3. Hệ số loại khách:
+                        {% if chi_tiet.co_khach_nuoc_ngoai %}<small class="text-primary">(Có khách quốc tế x1.5)</small>{% endif %}
+                    </span>
+                    <span class="fw-semibold">&times; {{ chi_tiet.he_so }}</span>
+                </div>
+
+                <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                    <span class="fw-bold fs-5 text-dark">Tổng Thu Tiền Khách:</span>
+                    <span class="fs-2 price-tag text-dark">{{ chi_tiet.tong_tien|vnd }}</span>
+                </div>
+            </div>
+
+                        <form id="formStaffPayment" method="POST" action="{{ url_for('staff_payment') }}" class="d-flex justify-content-end gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="ma_phieu" value="{{ phieu.ma_phieu }}">
+                <a href="{{ url_for('staff_payment') }}" class="btn btn-outline-secondary rounded-pill px-4">Hủy</a>
+                <button type="submit" id="btnStaffPaymentSubmit" class="btn btn-dark-luxury px-4 py-2 d-flex align-items-center gap-2" data-ten-phong="{{ phieu.ten_phong }}" data-tong-tien="{{ chi_tiet.tong_tien|vnd }}">
+                    <i class="bi bi-receipt"></i>
+                    <span>Lập Hóa Đơn &amp; Thu Tiền Tại Quầy</span>
+                </button>
+            </form>
+        </div>
+    {% elif so_phong_tim %}
+        <div class="card card-luxury p-4 text-center">
+            <i class="bi bi-search fs-2 text-muted mb-2 d-block"></i>
+            <h6 class="font-serif fw-bold">Không tìm thấy phiếu thuê chưa thanh toán cho: "{{ so_phong_tim }}"</h6>
+            <p class="text-muted small">Vui lòng kiểm tra lại số phòng hoặc chọn trực tiếp từ danh sách chờ thanh toán bên dưới.</p>
+        </div>
+    {% endif %}
+
+        <div class="card card-luxury p-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h6 class="font-serif fw-bold m-0">Danh Sách Phiếu Thuê Chờ Thanh Toán</h6>
+                <small class="text-muted">Nhân viên bấm "Chọn lập hóa đơn" để nạp thông tin thanh toán</small>
+            </div>
+            <span class="badge bg-light text-dark border rounded-pill px-3 py-1">
+                {{ ds_phieu_chua_tt|length }} phiếu đang lưu trú
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-luxury align-middle m-0 small">
+                <thead>
+                    <tr>
+                        <th>Mã Phiếu</th>
+                        <th>Phòng</th>
+                        <th>Khách Đại Diện</th>
+                        <th>Ngày Nhận - Trả</th>
+                        <th>Số Lượng Khách</th>
+                        <th class="text-end">Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if ds_phieu_chua_tt %}
+                        {% for pt in ds_phieu_chua_tt %}
+                            <tr>
+                                <td class="fw-bold">{{ pt.ma_phieu }}</td>
+                                <td>
+                                    <strong>{{ pt.ten_phong }}</strong>
+                                    <span class="badge bg-light text-dark border rounded-pill ms-1">Loại {{ pt.loai_phong }}</span>
+                                </td>
+                                <td>{{ pt.nguoi_lap }}</td>
+                                <td>{{ pt.ngay_nhan }} &rarr; {{ pt.ngay_tra }} ({{ pt.so_ngay }} ngày)</td>
+                                <td>
+                                    {{ pt.ds_khach|length }} khách
+                                    {% if pt.ds_khach|length >= 3 %}
+                                        <span class="badge bg-info-subtle text-info border rounded-pill ms-1">+25%</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('staff_payment', so_phong=pt.phong_id) }}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                        Chọn lập hóa đơn &rarr;
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                Hiện không có phòng nào đang thuê chờ thanh toán.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('formStaffPayment');
+    const btn = document.getElementById('btnStaffPaymentSubmit');
+    if (form && btn) {
+        form.addEventListener('submit', function (e) {
+            const tenPhong = btn.getAttribute('data-ten-phong') || 'phòng';
+            const tongTien = btn.getAttribute('data-tong-tien') || '';
+            const msg = 'Xác nhận lập hóa đơn và thu tiền tại quầy cho ' + tenPhong + ' với tổng số tiền ' + tongTien + '?';
+            if (!confirm(msg)) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

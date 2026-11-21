@@ -1,0 +1,108 @@
+{% extends "layouts/base_client.html" %}
+
+{% block title %}Phiếu Thuê Của Tôi - Grand Luxury{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="mb-4">
+        <span class="badge bg-white text-dark border rounded-pill px-3 py-1 mb-2 font-sans">Dịch Vụ Khách Hàng</span>
+        <h2 class="font-serif fw-bold m-0">Danh Sách Phiếu Thuê Phòng</h2>
+        <p class="text-muted small mt-1 mb-0">Theo dõi thông tin lưu trú và thanh toán trực tuyến thuận tiện</p>
+    </div>
+
+    {% if ds_phieu %}
+        <div class="row g-4">
+            {% for pt in ds_phieu %}
+                <div class="col-lg-6">
+                    <div class="card card-luxury p-4 h-100 d-flex flex-column justify-content-between shadow-sm">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <span class="badge bg-dark rounded-pill px-3 py-1 text-white me-2">Mã: {{ pt.ma_phieu }}</span>
+                                    <span class="badge bg-light text-dark border rounded-pill px-2 py-1">Loại {{ pt.loai_phong }}</span>
+                                </div>
+                                {% if pt.trang_thai == 'CHUA_THANH_TOAN' %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1">
+                                        <i class="bi bi-hourglass-split me-1"></i> Chưa Thanh Toán
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Đã Thanh Toán
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <h4 class="font-serif fw-bold mb-2">{{ pt.ten_phong }}</h4>
+                            <div class="text-muted small mb-3">
+                                <i class="bi bi-person me-1"></i> Người đại diện: <strong>{{ pt.nguoi_lap }}</strong>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-4 mb-3">
+                                <div class="row g-2 text-center">
+                                    <div class="col-4 border-end">
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;">Nhận phòng</small>
+                                        <span class="fw-semibold small">{{ pt.ngay_nhan }}</span>
+                                    </div>
+                                    <div class="col-4 border-end">
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;">Trả phòng</small>
+                                        <span class="fw-semibold small">{{ pt.ngay_tra }}</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;">Số ngày thuê</small>
+                                        <span class="fw-bold">{{ pt.so_ngay }} ngày</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted fw-semibold">Khách lưu trú ({{ pt.ds_khach|length }}/3 khách):</small>
+                                    {% if pt.tinh_tien.co_phu_thu %}
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill" style="font-size: 0.7rem;">+25% Khách thứ 3</span>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for k in pt.ds_khach %}
+                                        <span class="badge bg-white text-dark border rounded-pill py-1 px-2" style="font-size: 0.75rem;">
+                                            {{ k.ho_ten }} 
+                                            {% if k.loai_khach == 'NUOC_NGOAI' %}
+                                                <span class="text-primary fw-bold">&bull; Quốc tế (x1.5)</span>
+                                            {% endif %}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-top d-flex justify-content-between align-items-center mt-2">
+                            <div>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Tổng thanh toán:</small>
+                                <span class="fs-4 price-tag text-dark">{{ pt.tinh_tien.tong_tien|vnd }}</span>
+                            </div>
+
+                            {% if pt.trang_thai == 'CHUA_THANH_TOAN' %}
+                                <a href="{{ url_for('checkout', ma_phieu=pt.ma_phieu) }}" class="btn btn-dark-luxury px-3 py-2 d-flex align-items-center gap-1">
+                                    <span>Thanh toán ngay</span>
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('invoice_result', ma_hoa_don=pt.ma_hoa_don) }}" class="btn btn-outline-luxury px-3 py-2 d-flex align-items-center gap-1">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Xem hóa đơn</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card card-luxury p-5 text-center">
+            <i class="bi bi-journal-x fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="font-serif fw-bold">Chưa Có Phiếu Thuê Phòng</h5>
+            <p class="text-muted small">Hiện tại bạn chưa có phiếu thuê nào trong hệ thống.</p>
+            <a href="{{ url_for('home') }}#danh-sach-phong" class="btn btn-dark-luxury mx-auto px-4 mt-2">Xem Danh Mục Phòng</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
