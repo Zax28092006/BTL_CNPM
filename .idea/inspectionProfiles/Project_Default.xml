@@ -1,0 +1,71 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="blinker" />
+          <option value="certifi" />
+          <option value="click" />
+          <option value="cloudinary" />
+          <option value="Flask" />
+          <option value="Flask-Admin" />
+          <option value="Flask-Login" />
+          <option value="Flask-SQLAlchemy" />
+          <option value="itsdangerous" />
+          <option value="Jinja2" />
+          <option value="MarkupSafe" />
+          <option value="PyMySQL" />
+          <option value="six" />
+          <option value="SQLAlchemy" />
+          <option value="typing_extensions" />
+          <option value="urllib3" />
+          <option value="Werkzeug" />
+          <option value="WTForms" />
+          <option value="annotated-doc" />
+          <option value="annotated-types" />
+          <option value="anyio" />
+          <option value="argon2-cffi" />
+          <option value="argon2-cffi-bindings" />
+          <option value="asgiref" />
+          <option value="cffi" />
+          <option value="colorama" />
+          <option value="contourpy" />
+          <option value="cycler" />
+          <option value="Django" />
+          <option value="fastapi" />
+          <option value="flask-cors" />
+          <option value="fonttools" />
+          <option value="greenlet" />
+          <option value="idna" />
+          <option value="joblib" />
+          <option value="kiwisolver" />
+          <option value="matplotlib" />
+          <option value="mysql" />
+          <option value="mysqlclient" />
+          <option value="narwhals" />
+          <option value="numpy" />
+          <option value="packaging" />
+          <option value="pandas" />
+          <option value="pillow" />
+          <option value="pycparser" />
+          <option value="pydantic" />
+          <option value="pydantic_core" />
+          <option value="pyparsing" />
+          <option value="python-dateutil" />
+          <option value="scikit-learn" />
+          <option value="scipy" />
+          <option value="seaborn" />
+          <option value="setuptools" />
+          <option value="sqlparse" />
+          <option value="starlette" />
+          <option value="threadpoolctl" />
+          <option value="typing-inspection" />
+          <option value="tzdata" />
+          <option value="wheel" />
+          <option value="xgboost" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

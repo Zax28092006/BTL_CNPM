@@ -1,9 +1,0 @@
-from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:Mck28092006@localhost/hoteldb?charset=utf8mb4"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
-
-db = SQLAlchemy(app=app)
-
-len_password = 100
