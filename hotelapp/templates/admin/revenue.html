@@ -1,0 +1,90 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container-fluid">
+  <style>
+    .monthly-report { border-collapse: collapse; width: 100%; color: #111; background: #fff; }
+    .monthly-report th, .monthly-report td { border: 1px solid #555; padding: 8px 10px; }
+    .monthly-report .report-title { font-size: 22px; font-weight: 400; text-align: center; }
+    .monthly-report .month-title { text-align: center; font-size: 18px; font-weight: 400; }
+    .monthly-report thead th { text-align: center; font-weight: 500; }
+    .monthly-report .number { text-align: center; }
+    .monthly-report tfoot td { font-weight: 600; }
+  </style>
+  <form method="get" class="form-inline mb-3">
+    <label for="month" class="mr-2">Tháng</label>
+    <select id="month" name="month" class="form-control mr-3">
+      {% for m in range(1, 13) %}
+      <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ '%02d'|format(m) }}</option>
+      {% endfor %}
+    </select>
+    <label for="year" class="mr-2">Năm</label>
+    <input id="year" name="year" type="number" min="2000" max="2100"
+           value="{{ year }}" class="form-control mr-3" required>
+    <button type="submit" class="btn btn-primary">Xem báo cáo</button>
+  </form>
+  
+  <div class="table-responsive">
+    <table class="monthly-report">
+      <thead>
+        <tr>
+          <th colspan="5" class="report-title">BÁO CÁO DOANH THU THEO THÁNG</th>
+        </tr>
+        <tr>
+          <th colspan="5" class="month-title">Tháng: {{ '%02d'|format(month) }}/{{ year }}</th>
+        </tr>
+        <tr>
+          <th>STT</th><th>Loại phòng</th><th>Doanh thu</th><th>Số lượt thuê</th><th>Tỷ lệ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="number">{{ loop.index }}</td>
+          <td>{{ row.name }}</td>
+          <td class="number">{{ '{:,.0f}'.format(row.amount) }} VNĐ</td>
+          <td class="number">{{ row.rental_count }}</td>
+          <td class="number">{{ '%.2f'|format(row.ratio) }}%</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="number">Không có hóa đơn trong tháng này.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="5">Tổng doanh thu: {{ '{:,.0f}'.format(total) }} VNĐ</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header">Doanh thu theo phòng trong tháng</div>
+    <div class="card-body" style="position: relative; height: 360px">
+      <canvas id="monthlyRevenueChart" aria-label="Biểu đồ doanh thu theo phòng" role="img"></canvas>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const revenueLabels = {{ chart_labels|tojson }};
+  const revenueValues = {{ chart_values|tojson }};
+  new Chart(document.getElementById('monthlyRevenueChart'), {
+    type: 'bar',
+    data: {
+      labels: revenueLabels,
+      datasets: [{
+        label: 'Doanh thu (VNĐ)',
+        data: revenueValues,
+        backgroundColor: 'rgba(54, 162, 235, 0.65)',
+        borderColor: 'rgb(54, 162, 235)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString('vi-VN') } } },
+      plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label}: ${context.parsed.y.toLocaleString('vi-VN')} VNĐ` } } }
+    }
+  });
+</script>
+{% endblock %}

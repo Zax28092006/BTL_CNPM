@@ -2,50 +2,10 @@
 
 {% block body %}
 
+<h2>Quản lý khách sạn</h2>
 {% if current_user.is_authenticated %}
-
-  <div class="row">
-      <div class="col-md-3">
-        <img src="{{ current_user.avatar }}" class="img-fluid rounded" />
-      </div>
-      <div class="col-md-9">
-        <h3>Chào <span class="text-success">{{current_user.username}}</span>!</h3>
-      </div>
-  </div>
-
-
-<div class="row mt-3">
-    <div class="col-6">
-        <table class="table">
-            <tr>
-                <th>Id</th>
-                <th>Tên danh mục</th>
-                <th>Số lượng</th>
-            </tr>
-            {% for s in stats %}
-            <tr>
-                <td>{{ s[0] }}</td>
-                <td>{{ s[1] }}</td>
-                <td>{{ s[2] }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
-    <div class="col-6">
-        <canvas id="myChart"></canvas>
-    </div>
-</div>
+<p>Xin chào, {{ current_user.username }}. Chọn một mục trên thanh điều hướng để quản lý dữ liệu.</p>
 {% else %}
-<form method="post" action="/login">
-  <div class="form-group">
-    <label for="username">Tên đăng nhập:</label>
-    <input type="text" class="form-control" placeholder="Tên đăng nhập" id="username" name="username" />
-  </div>
-  <div class="form-group">
-    <label for="pwd">Mật khẩu:</label>
-    <input type="password" class="form-control" placeholder="Mật khẩu" id="pwd" name="password" />
-  </div>
-  <button type="submit" class="btn btn-primary">Đăng nhập</button>
-</form>
+<p>Vui lòng <a href="{{ url_for('login_view') }}">đăng nhập</a> bằng tài khoản nhân viên quản trị để tiếp tục.</p>
 {% endif %}
 {% endblock %}

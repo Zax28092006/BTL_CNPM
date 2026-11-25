@@ -7,10 +7,6 @@ from flask_login import login_user, login_required, logout_user
 def index():
     return render_template('index.html')
 
-@app.route('/admin')
-def admin():
-    return render_template('admin/index.html')
-
 @app.route('/login')
 def login_view():
     return render_template('login.html')
@@ -64,4 +60,5 @@ def load_user(user_id):
 
 if __name__ == '__main__':
     with app.app_context():
+        from hotelapp import admin
         app.run(debug=True)
