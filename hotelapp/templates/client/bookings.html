@@ -1,0 +1,218 @@
+{% extends 'client/base_client.html' %}
+
+{% set active_client_nav = 'bookings' %}
+{% set show_client_bottom_nav = true %}
+{% set filter_url = bookings_filter_url | default('') %}
+{% set cur_status = (request.args.get('status', '') if request is defined else '') %}
+{% set cur_pay_status = (request.args.get('payment_status', '') if request is defined else '') %}
+{% set is_filtered = (cur_status or cur_pay_status) %}
+
+{% block title %}Đặt phòng của tôi — The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block content %}
+<div class="gl-container gl-container--client">
+  <div class="gl-page-head">
+    <div>
+      <h1 class="mb-1">Đặt phòng của tôi</h1>
+      <p class="gl-helper mb-0">Theo dõi độc lập trạng thái đặt phòng, trạng thái thanh toán, nhận phòng và hóa đơn liên kết.</p>
+    </div>
+  </div>
+
+  {% if not (current_user is defined and current_user.is_authenticated) %}
+  <div class="gl-alert gl-alert--info" role="status">
+    <div class="gl-alert__title">Yêu cầu đăng nhập</div>
+    <p class="mb-2">Vui lòng đăng nhập bằng tài khoản khách hàng để xem danh sách đặt phòng của bạn.</p>
+    <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đăng nhập</a>
+  </div>
+  {% elif bookings_error is defined and bookings_error %}
+  <div class="gl-alert gl-alert--danger" role="alert">
+    <div class="gl-alert__title">Không tải được danh sách đặt phòng</div>
+    <p class="mb-0">{{ bookings_error }}</p>
+  </div>
+  {% else %}
+    {% if filter_url %}
+    <form class="gl-toolbar row g-2 align-items-end" method="get" action="{{ filter_url }}">
+      <div class="col-12 col-sm-6 col-md-4">
+        <label class="gl-label" for="bookingStatusFilter">Trạng thái đặt phòng</label>
+        <select id="bookingStatusFilter" name="status" class="form-select gl-select">
+          <option value="">Tất cả trạng thái đặt</option>
+          {% for st in booking_statuses | default([]) %}
+          <option value="{{ st.value }}" {{ 'selected' if cur_status == st.value else '' }}>{{ st.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if payment_statuses is defined and payment_statuses %}
+      <div class="col-12 col-sm-6 col-md-4">
+        <label class="gl-label" for="bookingPayFilter">Trạng thái thanh toán</label>
+        <select id="bookingPayFilter" name="payment_status" class="form-select gl-select">
+          <option value="">Tất cả thanh toán</option>
+          {% for pst in payment_statuses %}
+          <option value="{{ pst.value }}" {{ 'selected' if cur_pay_status == pst.value else '' }}>{{ pst.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="col-12 col-sm-auto">
+        <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Lọc</button>
+      </div>
+    </form>
+    {% endif %}
+
+    {% if bookings is defined and bookings %}
+    <div class="gl-record-list">
+      {% for b in bookings %}
+      {% set b_state = b.status | default('') %}
+      {% set b_label = b.status_label | default('') %}
+      {% set p_state = b.payment_status | default('') %}
+      {% set p_label = b.payment_status_label | default('Chưa thanh toán' if p_state == 'unpaid' else ('Đã thanh toán' if p_state == 'paid' else '')) %}
+      {% set r_state = b.rental_status | default('') %}
+      {% set r_label = b.rental_status_label | default('') %}
+      <article class="gl-record-row" data-gl-booking-code="{{ b.code | default(b.id) }}">
+        <div class="min-w-0">
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            {% if b.code %}<strong class="gl-tabular">{{ b.code }}</strong>{% endif %}
+            {% if b_state or b_label %}
+              {% set chip_state = b_state %}
+              {% set chip_label = 'Đặt phòng: ' ~ b_label if b_label else 'Đặt phòng: ' ~ b_state %}
+              {% include 'partials/_status_chip.html' %}
+            {% endif %}
+            {% if p_state or p_label %}
+              {% set chip_state = p_state %}
+              {% set chip_label = p_label %}
+              {% include 'partials/_status_chip.html' %}
+            {% endif %}
+            {% if r_label %}
+              {% set chip_state = r_state %}
+              {% set chip_label = r_label %}
+              {% include 'partials/_status_chip.html' %}
+            {% endif %}
+          </div>
+
+          <div class="fw-semibold">
+            {{ b.room_name | default('Phòng lưu trú') }}{% if b.room_type %} · {{ b.room_type }}{% endif %}
+          </div>
+          <div class="gl-helper mt-1 mb-0 gl-tabular">
+            {{ b.check_in_display | default('—') }} – {{ b.check_out_display | default('—') }}
+            {% if b.nights %} ({{ b.nights }} đêm){% endif %}
+            {% if b.guest_count %} · {{ b.guest_count }} khách{% endif %}
+          </div>
+          <div class="gl-helper mt-1 mb-0">
+            {% if b.invoice_code and b.invoice_url %}
+              Hóa đơn: <a class="gl-tabular fw-semibold" href="{{ b.invoice_url }}">{{ b.invoice_code }}</a>
+            {% elif b.invoice_url %}
+              <a class="fw-semibold" href="{{ b.invoice_url }}">Đã phát hành hóa đơn</a>
+            {% else %}
+              <span>Chưa có hóa đơn — {{ b.invoice_pending_note | default('Hồ sơ thanh toán sẽ hiển thị tại mục Hóa đơn khi phát sinh.') }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          {% if b.total_display %}
+          <span class="price-value {{ 'gl-price-current--promo' if b.has_discount else '' }} me-2">{{ b.total_display }}</span>
+          {% endif %}
+          <button type="button"
+                  class="gl-btn gl-btn--sm gl-btn-secondary"
+                  data-gl-open-booking-detail
+                  data-gl-booking='{{ b | tojson }}'>
+            Xem chi tiết
+          </button>
+          {% if b.invoice_url %}
+          <a class="gl-btn gl-btn--sm {{ 'btn-primary' if p_state == 'unpaid' else 'gl-btn-secondary' }}"
+             href="{{ b.invoice_url }}">
+            {{ 'Xem / Thanh toán HĐ' if p_state == 'unpaid' else 'Xem hóa đơn' }}
+          </a>
+          {% endif %}
+          {% if b.cancel_url %}
+          <button type="button"
+                  class="gl-btn gl-btn--sm gl-btn-danger-outline"
+                  data-bs-toggle="modal"
+                  data-bs-target="#cancelBookingModal"
+                  data-gl-cancel-trigger
+                  data-gl-cancel-url="{{ b.cancel_url }}"
+                  data-gl-booking-code="{{ b.code | default('') }}">
+            Hủy đặt phòng
+          </button>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+      {% set empty_title = 'Không tìm thấy phiếu đặt phù hợp' if is_filtered else 'Bạn chưa có đặt phòng nào' %}
+      {% set empty_desc = 'Không có phiếu đặt phù hợp với bộ lọc đã chọn.' if is_filtered else 'Chưa có đặt phòng nào. Những thông tin đặt phòng của bạn sẽ được hiển thị tại đây.' %}
+      {% set empty_cta_label = 'Khám phá hạng phòng' %}
+      {% set empty_cta_href = url_for('index') ~ '#homeRooms' %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  {% endif %}
+</div>
+
+<div id="bookingDetailDrawer" class="gl-drawer-backdrop" role="dialog" aria-modal="true" aria-labelledby="c02DrawerCode" hidden>
+  <div class="gl-drawer-panel">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+      <h2 class="h3 mb-0">Chi tiết phiếu đặt <span id="c02DrawerCode" class="gl-tabular">—</span></h2>
+      <button id="closeC02DrawerBtn" type="button" class="btn-close" aria-label="Đóng chi tiết"></button>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Phòng</span>
+      <span id="c02DrawerRoom" class="gl-folio__value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Thời gian</span>
+      <span id="c02DrawerDates" class="gl-folio__value gl-tabular">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Số khách</span>
+      <span id="c02DrawerGuests" class="gl-folio__value gl-tabular">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Trạng thái đặt phòng</span>
+      <span id="c02DrawerStatus" class="gl-folio__value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Trạng thái thanh toán</span>
+      <span id="c02DrawerPayStatus" class="gl-folio__value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Trạng thái lưu trú</span>
+      <span id="c02DrawerRentalStatus" class="gl-folio__value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Tổng tiền dự kiến</span>
+      <span id="c02DrawerTotal" class="gl-folio__value price-value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Hóa đơn liên kết</span>
+      <span id="c02DrawerInvoiceInfo" class="gl-folio__value gl-tabular">—</span>
+    </div>
+    <div class="d-grid gap-2 mt-4">
+      <a id="c02DrawerInvoiceLink" class="btn btn-primary gl-btn" href="/" hidden>Xem hóa đơn</a>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="cancelBookingModal" tabindex="-1" aria-labelledby="cancelBookingModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="cancelBookingModalLabel">Xác nhận hủy đặt phòng</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Bạn có chắc chắn muốn hủy <strong id="cancelBookingCode">phiếu đặt phòng này</strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        <form id="cancelBookingForm" method="post" action="">
+          <button type="submit" class="gl-btn gl-btn--sm gl-btn-danger-outline">Xác nhận hủy</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/client-pages.js') }}"></script>
+{% endblock %}

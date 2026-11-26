@@ -1,0 +1,271 @@
+{% extends 'public/base_public.html' %}
+{% from 'partials/_room_tier_sections.html' import render_room_tier_sections %}
+
+{% set active_nav = 'rooms' %}
+{% set home_url = url_for('index') %}
+{% set home_nav_href = home_url %}
+{% set rooms_href = room_search_url if (room_search_url is defined and room_search_url) else '#searchFormPanel' %}
+{% set policy_href = policy_page_url if (policy_page_url is defined and policy_page_url) else '' %}
+{% set contact_href = contact_page_url if (contact_page_url is defined and contact_page_url) else '#footerInfo' %}
+{% set rooms_nav_href = rooms_href %}
+{% set policy_nav_href = policy_href if policy_href else (home_url ~ '#homeAbout') %}
+{% set contact_nav_href = contact_href %}
+{% set policy_link = policy_href %}
+{% set search_endpoint = search_action_url | default(room_search_url | default('')) %}
+{% set primary_cta_href = '#searchFormPanel' %}
+{% set footer_extra_class = 'gl-footer--home' %}
+{% set footer_brand_tagline = 'Không gian lưu trú chọn lọc với thiết kế hài hòa và quy trình đón tiếp chu đáo.' %}
+{% set footer_show_stay_info = false %}
+
+{% set guest_limit = max_guests if (max_guests is defined and max_guests) else 3 %}
+{% set selected_guests = search_guests if (search_guests is defined and search_guests) else (request.args.get('guests') if request is defined else '') %}
+{% set current_checkin = search_checkin if (search_checkin is defined and search_checkin is not none) else (request.args.get('checkin', '') if request is defined else '') %}
+{% set current_checkout = search_checkout if (search_checkout is defined and search_checkout is not none) else (request.args.get('checkout', '') if request is defined else '') %}
+{% set search_performed = (search_summary is defined and search_summary) or (current_checkin and current_checkout) %}
+{% set display_list = rooms if (rooms is defined and rooms is not none) else (catalog_rooms if (catalog_rooms is defined and catalog_rooms is not none) else none) %}
+
+{% set status_map = {
+  'available': {'label': 'Còn phòng', 'cls': 'gl-chip--success'},
+  'full': {'label': 'Hết phòng', 'cls': 'gl-chip--danger'},
+  'fully_booked': {'label': 'Hết phòng', 'cls': 'gl-chip--danger'},
+  'unavailable': {'label': 'Hết phòng', 'cls': 'gl-chip--danger'},
+  'manual_confirmation': {'label': 'Chờ lễ tân xác nhận', 'cls': 'gl-chip--warning'},
+  'needs_confirmation': {'label': 'Chờ lễ tân xác nhận', 'cls': 'gl-chip--warning'},
+  'reserved': {'label': 'Đã đặt', 'cls': 'gl-chip--booked'},
+  'low_availability': {'label': 'Còn ít phòng', 'cls': 'gl-chip--warning'}
+} %}
+
+{% block title %}Các hạng phòng — The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<section class="gl-search-intro" aria-labelledby="searchPageTitle">
+  <div class="gl-container gl-container--public">
+    <nav aria-label="Đường dẫn trang" class="mb-3">
+      <ol class="gl-breadcrumb mb-0">
+        <li><a href="{{ home_url }}">Trang chủ</a></li>
+        <li aria-hidden="true">/</li>
+        <li class="gl-breadcrumb__current" aria-current="page">Các hạng phòng</li>
+      </ol>
+    </nav>
+    <h1 id="searchPageTitle" class="gl-search-intro__title">Các hạng phòng</h1>
+    <p class="gl-search-intro__lead mb-0">
+      Tham khảo thông tin hạng phòng, đơn giá theo đêm và kiểm tra tình trạng phòng trống theo ngày lưu trú.
+    </p>
+  </div>
+</section>
+
+<section id="searchFormPanel" class="gl-search-form-section" aria-labelledby="searchFormHeading">
+  <div class="gl-container gl-container--public">
+    <div class="gl-search-panel">
+      <h2 id="searchFormHeading" class="visually-hidden">Kiểm tra tình trạng phòng theo ngày và số khách</h2>
+
+      <div id="searchErrorSummary" class="gl-alert gl-alert--danger mb-3" role="alert" hidden>
+        <div class="gl-alert__title">Vui lòng kiểm tra thông tin tìm kiếm</div>
+        <ul id="searchErrorList" class="gl-alert__list mb-0"></ul>
+      </div>
+
+      {% if search_error is defined and search_error %}
+      <div id="searchServerError" class="gl-alert gl-alert--danger mb-3" role="alert">
+        <div class="gl-alert__title">Không thể tải danh sách phòng</div>
+        <p class="mb-0">{{ search_error }}</p>
+      </div>
+      {% endif %}
+
+      <div id="searchUnavailableBox" class="gl-alert gl-alert--info mb-3" role="status" hidden>
+        <div class="gl-alert__title">Tra cứu phòng trống trực tuyến đang được cập nhật</div>
+        <p class="mb-0">Chức năng lọc theo ngày nhận và trả phòng hiện đang được cập nhật.</p>
+      </div>
+
+      <form id="roomSearchForm"
+            method="get"
+            action="{{ search_endpoint }}"
+            data-gl-search-endpoint="{{ search_endpoint }}"
+            data-gl-booking-date="{{ booking_date | default('') }}"
+            data-gl-max-checkin-date="{{ max_check_in_date | default('') }}"
+            data-gl-max-guests="{{ guest_limit }}"
+            novalidate>
+        <div class="gl-search-grid">
+          <div class="gl-search-field">
+            <label class="gl-label" for="searchCheckInVisible">Ngày nhận phòng <span class="gl-required-mark">*</span></label>
+            <div class="gl-date-field">
+              <input id="searchCheckIn"
+                     name="checkin"
+                     class="form-control gl-input gl-tabular"
+                     type="text"
+                     value="{{ current_checkin }}"
+                     placeholder="dd/mm/yyyy"
+                     autocomplete="off"
+                     aria-describedby="searchCheckInHelp searchCheckInError"
+                     required>
+              <span class="gl-date-field__icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </span>
+            </div>
+            <p id="searchCheckInHelp" class="gl-helper">Đặt trước tối đa 28 ngày.</p>
+            <p id="searchCheckInError" class="gl-field-error" role="alert" hidden></p>
+          </div>
+
+          <div class="gl-search-field">
+            <label class="gl-label" for="searchCheckOutVisible">Ngày trả phòng <span class="gl-required-mark">*</span></label>
+            <div class="gl-date-field">
+              <input id="searchCheckOut"
+                     name="checkout"
+                     class="form-control gl-input gl-tabular"
+                     type="text"
+                     value="{{ current_checkout }}"
+                     placeholder="dd/mm/yyyy"
+                     autocomplete="off"
+                     aria-describedby="searchCheckOutHelp searchCheckOutError"
+                     required>
+              <span class="gl-date-field__icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </span>
+            </div>
+            <p id="searchCheckOutHelp" class="gl-helper">Sau ngày nhận phòng.</p>
+            <p id="searchCheckOutError" class="gl-field-error" role="alert" hidden></p>
+          </div>
+
+          <div class="gl-search-field gl-search-field--guests">
+            <label class="gl-label" for="searchGuests">Số khách <span class="gl-required-mark">*</span></label>
+            <select id="searchGuests"
+                    name="guests"
+                    class="form-select gl-select gl-tabular"
+                    aria-describedby="searchGuestsHelp searchGuestsError">
+              {% for count in range(1, guest_limit + 1) %}
+              <option value="{{ count }}" {{ 'selected' if (selected_guests | string) == (count | string) else ('selected' if (not selected_guests and count == 2 and guest_limit >= 2) else '') }}>{{ count }} khách</option>
+              {% endfor %}
+            </select>
+            <p id="searchGuestsHelp" class="gl-helper">Chọn số khách dự kiến.</p>
+            <p id="searchGuestsError" class="gl-field-error" role="alert" hidden></p>
+          </div>
+
+          <div class="gl-search-actions">
+            <button id="searchSubmitBtn" type="submit" class="btn btn-primary gl-btn gl-search-submit">
+              Tìm phòng
+            </button>
+            <button id="searchResetBtn" type="button" class="btn gl-btn gl-btn-secondary gl-search-reset">
+              Đặt lại
+            </button>
+          </div>
+        </div>
+
+        {% if not search_performed %}
+        <p class="gl-helper mt-3 mb-0">Chọn ngày nhận và trả phòng để kiểm tra tình trạng phòng.</p>
+        {% endif %}
+
+        <p id="searchLoadingStatus" class="gl-helper mt-3 mb-0" role="status" aria-live="polite" hidden>
+          Đang tải danh sách phòng phù hợp...
+        </p>
+        <div id="searchLoadingSkeleton" class="gl-skeleton-grid" aria-hidden="true" hidden>
+          <div class="gl-skeleton-box"></div>
+          <div class="gl-skeleton-box"></div>
+          <div class="gl-skeleton-box"></div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+{% if search_summary is defined and search_summary %}
+<section id="searchSummary" class="gl-search-summary-section" aria-label="Tóm tắt điều kiện tìm kiếm">
+  <div class="gl-container gl-container--public">
+    <div class="gl-search-summary">
+      {% if search_summary.checkin_display %}
+      <div class="gl-search-summary__item">
+        <span class="gl-search-summary__label">Nhận phòng</span>
+        <strong class="gl-search-summary__val gl-tabular">{{ search_summary.checkin_display }}</strong>
+      </div>
+      {% endif %}
+      {% if search_summary.checkout_display %}
+      <div class="gl-search-summary__item">
+        <span class="gl-search-summary__label">Trả phòng</span>
+        <strong class="gl-search-summary__val gl-tabular">{{ search_summary.checkout_display }}</strong>
+      </div>
+      {% endif %}
+      {% if search_summary.nights or (current_checkin and current_checkout) %}
+      <div class="gl-search-summary__item">
+        <span class="gl-search-summary__label">Thời gian</span>
+        <strong id="searchSummaryNights"
+                class="gl-search-summary__val gl-tabular"
+                data-checkin="{{ current_checkin }}"
+                data-checkout="{{ current_checkout }}">{{ search_summary.nights }} đêm</strong>
+      </div>
+      {% endif %}
+      {% if search_summary.guests %}
+      <div class="gl-search-summary__item">
+        <span class="gl-search-summary__label">Số khách</span>
+        <strong class="gl-search-summary__val gl-tabular">{{ search_summary.guests }} khách</strong>
+      </div>
+      {% endif %}
+      {% if search_summary.total_count is defined and search_summary.total_count is not none %}
+      <div class="gl-search-summary__item">
+        <span class="gl-search-summary__label">Kết quả</span>
+        <strong class="gl-search-summary__val gl-tabular">{{ search_summary.total_count }} phòng phù hợp</strong>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section id="roomResults" class="gl-home-section gl-home-section--tinted" aria-labelledby="roomResultsTitle">
+  <div class="gl-container gl-container--public">
+    <div class="gl-home-section__head">
+      <div>
+        <h2 id="roomResultsTitle" class="gl-home-section__title mb-2">
+          {{ 'Kết quả theo ngày lưu trú' if search_performed else 'Danh sách hạng phòng' }}
+        </h2>
+        <p class="gl-home-section__note gl-search-note mb-0">
+          {{ 'Tình trạng phòng và tạm tính được đối chiếu theo khoảng ngày đã chọn.' if search_performed else 'Danh sách 9 phòng riêng biệt sắp xếp từ Hạng A (Suite gia đình), Hạng B (Phòng cao cấp) đến Hạng C (Phòng tiêu chuẩn).' }}
+        </p>
+      </div>
+    </div>
+
+    {% if not (search_performed and (not display_list or (display_list | length) == 0)) %}
+    <div id="searchTierFilters" class="gl-tab-bar" role="group" aria-label="Lọc theo hạng phòng">
+      <button type="button" class="gl-tab-btn is-active" data-gl-tier-filter="all" aria-pressed="true">Tất cả hạng (9 phòng)</button>
+      <button type="button" class="gl-tab-btn" data-gl-tier-filter="hang_a" aria-pressed="false">Hạng A · Suite gia đình</button>
+      <button type="button" class="gl-tab-btn" data-gl-tier-filter="hang_b" aria-pressed="false">Hạng B · Phòng cao cấp</button>
+      <button type="button" class="gl-tab-btn" data-gl-tier-filter="hang_c" aria-pressed="false">Hạng C · Phòng tiêu chuẩn</button>
+    </div>
+    {% endif %}
+
+    {% if search_performed and (not display_list or (display_list | length) == 0) %}
+    <div id="searchEmptyState" class="gl-search-empty" role="status">
+      <h3 class="gl-search-empty__title">Không tìm thấy phòng phù hợp với lựa chọn của bạn.</h3>
+      <p class="gl-search-empty__desc">
+        Bạn có thể thay đổi ngày lưu trú hoặc số khách để kiểm tra lại.
+      </p>
+      <button id="emptyEditDatesBtn" type="button" class="btn gl-btn gl-btn-secondary gl-btn--sm">
+        Sửa ngày lưu trú
+      </button>
+    </div>
+    {% else %}
+      {{ render_room_tier_sections(display_list if (display_list is defined and display_list) else none, 'p02', search_performed, search_summary, current_checkin, current_checkout, status_map, booking_url | default('')) }}
+    {% endif %}
+  </div>
+</section>
+{% include 'partials/_room_quick_view_modal.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/vn.js"></script>
+<script src="{{ url_for('static', filename='js/date-utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/room-search.js') }}"></script>
+<script src="{{ url_for('static', filename='js/room-quick-view.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 's04' %}
+{% set can_view_staff = is_staff_authorized | default(false) %}
+{% set lookup_url = payment_lookup_url | default('') %}
+{% set pay_action = confirm_payment_url | default('') %}
+{% set is_already_paid = (invoice is defined and invoice and invoice.payment_status in ['paid', 'completed']) %}
+
+{% block title %}Thanh toán tại quầy (S04) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Nghiệp vụ Lễ tân{% endblock %}
+
+{% block content %}
+<div class="gl-page-head gl-no-print">
+  <div>
+    <h1 class="mb-1">Thanh toán tại quầy</h1>
+    <p class="gl-helper mb-0">Ghi nhận thanh toán tiền mặt hoặc chuyển khoản ngân hàng theo số tiền trên hóa đơn.</p>
+  </div>
+</div>
+
+{% if not can_view_staff %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Nhân viên lễ tân</div>
+  <p class="mb-2">Vui lòng đăng nhập bằng tài khoản Nhân viên hoặc Quản trị viên để thực hiện thu tiền tại quầy.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  <form id="s04LookupForm" class="gl-toolbar row g-2 align-items-end gl-no-print" method="get" action="{{ lookup_url }}" novalidate>
+    <div class="col-12 col-md-8">
+      <label class="gl-label" for="s04Lookup">Tìm phiếu thuê hoặc hóa đơn</label>
+      <input id="s04Lookup" name="kw" type="search" class="form-control gl-input" value="{{ request.args.get('kw', '') if request is defined else '' }}" placeholder="Nhập mã phiếu thuê, mã hóa đơn hoặc tên khách">
+      <p id="s04LookupError" class="gl-field-error" hidden></p>
+    </div>
+    <div class="col-12 col-md-auto">
+      <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Tìm</button>
+    </div>
+  </form>
+
+  <div id="s04LookupNotice" class="gl-alert gl-alert--info mb-4 gl-no-print" role="status" hidden>
+    Chức năng tra cứu phiếu thuê để thu tiền tại quầy hiện đang được cập nhật.
+  </div>
+
+  {% if payment_error is defined and payment_error %}
+  <div class="gl-alert gl-alert--danger mb-4 gl-no-print" role="alert">{{ payment_error }}</div>
+  {% elif payment_recorded is defined and payment_recorded %}
+  <div class="gl-alert gl-alert--success mb-4 gl-no-print" role="status">
+    <div class="gl-alert__title">Đã ghi nhận thanh toán</div>
+    <p class="mb-2">{{ payment_recorded }}</p>
+    <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-gl-print-trigger>In hóa đơn</button>
+  </div>
+  {% endif %}
+
+  {% if invoice is defined and invoice %}
+  <div class="row g-4 align-items-start">
+    <div class="col-12 col-lg-6 gl-no-print">
+      {% if is_already_paid %}
+      <div class="gl-panel">
+        <div class="gl-alert gl-alert--success mb-3" role="status">
+          <div class="gl-alert__title">Hóa đơn đã thanh toán</div>
+          <p class="mb-0">Giao dịch này đã được ghi nhận hoàn tất. Bạn có thể in lại hóa đơn cho khách hàng.</p>
+        </div>
+        <button type="button" class="btn btn-primary gl-btn w-100" data-gl-print-trigger>In hóa đơn</button>
+      </div>
+      {% else %}
+      <form id="counterPaymentForm" class="gl-panel" method="post" action="{{ pay_action }}" novalidate>
+        {% if invoice.id %}<input type="hidden" name="invoice_id" value="{{ invoice.id }}">{% endif %}
+
+        <h2 class="h3 mb-3">Xác nhận thu tiền</h2>
+        <div class="mb-3">
+          <label class="gl-label" for="counterAmountDue">Tổng tiền phải thu (chỉ đọc)</label>
+          <input id="counterAmountDue" type="text" class="form-control gl-input price-value" value="{{ invoice.total_display | default('Chưa có dữ liệu') }}" readonly>
+        </div>
+
+        <fieldset class="mb-3">
+          <legend class="gl-label">Phương thức thanh toán <span class="gl-required-mark">*</span></legend>
+          <div class="gl-radio-card-group">
+            <label class="gl-radio-card">
+              <input type="radio" name="payment_method" value="cash" class="form-check-input mt-1">
+              <span>
+                <strong class="d-block">Tiền mặt</strong>
+                <span class="gl-helper mt-0">Thu trực tiếp tại quầy lễ tân</span>
+              </span>
+            </label>
+            <label class="gl-radio-card">
+              <input type="radio" name="payment_method" value="bank_transfer" class="form-check-input mt-1">
+              <span>
+                <strong class="d-block">Chuyển khoản ngân hàng</strong>
+                <span class="gl-helper mt-0">Đối chiếu giao dịch chuyển khoản</span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="mb-3">
+          <label class="gl-label" for="counterPayNote">Ghi chú giao dịch</label>
+          <textarea id="counterPayNote" name="note" class="form-control gl-input gl-textarea" rows="3"></textarea>
+        </div>
+
+        <p id="counterPaymentError" class="gl-field-error mb-3" role="alert" hidden></p>
+
+        <div id="s04PayNotice" class="gl-alert gl-alert--info mb-3" role="status" hidden>
+          Chức năng ghi nhận thanh toán tại quầy hiện đang được cập nhật.
+        </div>
+
+        <button id="confirmCounterPayBtn" type="submit" class="btn btn-primary gl-btn w-100">
+          Xác nhận ghi nhận thanh toán
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="col-12 col-lg-6">
+      {% include 'partials/_invoice_folio.html' %}
+    </div>
+  </div>
+  {% else %}
+    {% set empty_title = 'Chưa chọn phiếu để thanh toán' %}
+    {% set empty_desc = 'Vui lòng tra cứu phiếu thuê hoặc hóa đơn chưa thanh toán để xem số tiền cần thu.' %}
+    {% include 'partials/_empty_state.html' %}
+  {% endif %}
+{% endif %}
+
+<div class="modal fade" id="confirmCounterPayModal" tabindex="-1" aria-labelledby="confirmCounterPayLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="confirmCounterPayLabel">Xác nhận thu tiền tại quầy</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Vui lòng kiểm tra kỹ thông tin giao dịch trước khi ghi nhận thanh toán:</p>
+        <div class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Số tiền thu</span>
+          <span id="modalCounterAmount" class="gl-folio__value price-value">—</span>
+        </div>
+        <div class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Phương thức</span>
+          <span id="modalCounterMethod" class="gl-folio__value">—</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-bs-dismiss="modal">Kiểm tra lại</button>
+        <button id="modalCounterPayProceedBtn" type="button" class="btn btn-primary gl-btn gl-btn--sm">Xác nhận thu tiền</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/staff-pages.js') }}"></script>
+{% endblock %}

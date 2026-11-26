@@ -1,0 +1,86 @@
+{% set container_cls = footer_container_class | default('gl-container--public') %}
+{% set brand_href = url_for('index') if url_for else '/' %}
+{% set fallback_rooms_href = room_search_url if (room_search_url is defined and room_search_url) else (brand_href ~ '#homeRooms') %}
+{% set default_policy_href = policy_page_url if (policy_page_url is defined and policy_page_url) else '' %}
+{% set policy_href = policy_link if (policy_link is defined and policy_link) else default_policy_href %}
+{% set brand_tagline = footer_brand_tagline | default('Không gian lưu trú chọn lọc với thiết kế hài hòa và quy trình đón tiếp chu đáo.') %}
+{% set default_footer_nav = [
+  {'label': 'Trang chủ', 'href': brand_href},
+  {'label': 'Phòng', 'href': fallback_rooms_href}
+] %}
+{% if default_policy_href %}
+  {% set _ = default_footer_nav.append({'label': 'Quy định', 'href': default_policy_href}) %}
+{% endif %}
+{% set nav_links = footer_nav_items if (footer_nav_items is defined and footer_nav_items) else default_footer_nav %}
+{% set show_stay_block = footer_show_stay_info if footer_show_stay_info is defined else false %}
+{% set extra_footer_cls = footer_extra_class | default('') %}
+{% set active_contact = hotel_contact if (hotel_contact is defined and hotel_contact) else none %}
+{% set active_stay = hotel_stay_info if (hotel_stay_info is defined and hotel_stay_info) else none %}
+{% set has_contact_items = active_contact and (active_contact.address or active_contact.phone or active_contact.email or active_contact.hours) %}
+
+<footer id="footerInfo" class="gl-footer {{ extra_footer_cls }}">
+  <div class="gl-container {{ container_cls }}">
+    <div class="row g-4 align-items-start">
+      <div class="col-12 {{ 'col-lg-3' if show_stay_block else ('col-lg-3' if has_contact_items else 'col-lg-5') }}">
+        <img class="gl-footer__crest"
+             src="{{ url_for('static', filename='images/branding/valentia-logo-primary.png') }}"
+             alt="Logo The Valentia Hotel &amp; Suites"
+             width="89"
+             height="96">
+        {% if brand_tagline %}
+        <p class="gl-footer__tagline">{{ brand_tagline }}</p>
+        {% endif %}
+      </div>
+
+      {% if has_contact_items %}
+      <div class="col-12 col-sm-6 col-lg-3">
+        <h2 class="gl-footer__heading">Liên hệ</h2>
+        <ul class="gl-footer__list">
+          {% if active_contact.address %}<li>Địa chỉ: {{ active_contact.address }}</li>{% endif %}
+          {% if active_contact.phone %}<li>Hotline: {{ active_contact.phone }}</li>{% endif %}
+          {% if active_contact.email %}<li>Email: {{ active_contact.email }}</li>{% endif %}
+          {% if active_contact.hours %}<li>Giờ phục vụ: {{ active_contact.hours }}</li>{% endif %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if show_stay_block and active_stay %}
+      {% set stay_lg_col = 'col-lg-2' if (has_contact_items and nav_links and policy_href) else ('col-lg-3' if (has_contact_items and (nav_links or policy_href)) else ('col-lg-6' if has_contact_items else ('col-lg-4' if (nav_links and policy_href) else 'col-lg-5'))) %}
+      <div class="col-12 col-sm-6 {{ stay_lg_col }}">
+        <h2 class="gl-footer__heading">Thông tin lưu trú</h2>
+        <ul class="gl-footer__list">
+          {% if active_stay.check_in %}<li>{{ active_stay.check_in }}</li>{% endif %}
+          {% if active_stay.check_out %}<li>{{ active_stay.check_out }}</li>{% endif %}
+          {% if active_stay.advance_limit %}<li>{{ active_stay.advance_limit }}</li>{% endif %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if nav_links %}
+      {% set nav_lg_col = ('col-lg-2' if has_contact_items else ('col-lg-3' if policy_href else 'col-lg-4')) if show_stay_block else ('col-lg-4' if (not has_contact_items and policy_href) else ('col-lg-3' if policy_href else 'col-lg-4')) %}
+      <div class="col-12 col-sm-6 {{ nav_lg_col }}">
+        <h2 class="gl-footer__heading">Điều hướng</h2>
+        <ul class="gl-footer__list">
+          {% for item in nav_links %}
+          <li><a href="{{ item.href }}">{{ item.label }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if policy_href %}
+      {% set policy_lg_col = ('col-lg-2' if (has_contact_items or nav_links) else 'col-lg-4') if show_stay_block else ('col-lg-3' if (not has_contact_items and nav_links) else ('col-lg-2' if nav_links else 'col-lg-5')) %}
+      <div class="col-12 {{ policy_lg_col }}">
+        <h2 class="gl-footer__heading">Chính sách</h2>
+        <ul class="gl-footer__list">
+          <li><a href="{{ policy_href }}">Quy định lưu trú</a></li>
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="gl-footer__meta mt-4 pt-3 border-top border-secondary border-opacity-25">
+      © 2026 The Valentia Hotel &amp; Suites.
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,99 @@
+{% extends 'client/base_client.html' %}
+
+{% set active_client_nav = 'rental_slips' %}
+{% set show_client_bottom_nav = true %}
+
+{% block title %}Phiếu thuê phòng của tôi — The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block content %}
+<div class="gl-container gl-container--client">
+  <div class="gl-page-head">
+    <div>
+      <h1 class="mb-1">Phiếu thuê phòng của tôi</h1>
+      <p class="gl-helper mb-0">Thông tin nhận phòng, lưu trú và danh sách khách theo từng phiếu thuê.</p>
+    </div>
+  </div>
+
+  {% if not (current_user is defined and current_user.is_authenticated) %}
+  <div class="gl-alert gl-alert--info" role="status">
+    <div class="gl-alert__title">Yêu cầu đăng nhập</div>
+    <p class="mb-2">Vui lòng đăng nhập để xem thông tin phiếu thuê phòng của bạn.</p>
+    <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đăng nhập</a>
+  </div>
+  {% elif slips_error is defined and slips_error %}
+  <div class="gl-alert gl-alert--danger" role="alert">
+    <div class="gl-alert__title">Không tải được phiếu thuê phòng</div>
+    <p class="mb-0">{{ slips_error }}</p>
+  </div>
+  {% elif rental_slips is defined and rental_slips %}
+  <div class="gl-record-list">
+    {% for slip in rental_slips %}
+    <section class="gl-panel" aria-label="Phiếu thuê {{ slip.code | default(loop.index) }}">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            {% if slip.code %}<strong class="gl-tabular">{{ slip.code }}</strong>{% endif %}
+            {% if slip.rental_status or slip.status %}
+              {% set chip_state = slip.rental_status | default(slip.status) %}
+              {% set chip_label = slip.rental_status_label | default(slip.status_label | default('')) %}
+              {% include 'partials/_status_chip.html' %}
+            {% endif %}
+            {% if slip.payment_status %}
+              {% set chip_state = slip.payment_status %}
+              {% set chip_label = slip.payment_status_label | default('') %}
+              {% include 'partials/_status_chip.html' %}
+            {% endif %}
+          </div>
+          <h2 class="h3 mb-1">{{ slip.room_name | default('Phòng lưu trú') }}</h2>
+          <p class="gl-helper mb-0 gl-tabular">
+            Nhận phòng: {{ slip.check_in_display | default('—') }} · Trả phòng: {{ slip.check_out_display | default('—') }}
+          </p>
+        </div>
+
+        {% if slip.invoice_url %}
+        <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ slip.invoice_url }}">Xem hóa đơn</a>
+        {% endif %}
+      </div>
+
+      {% if slip.guests is defined and slip.guests %}
+      {% set hint_id = 'c03ScrollHint' ~ loop.index %}
+      <div class="gl-table-wrap">
+        <p id="{{ hint_id }}" class="gl-table-scroll-hint" hidden>Bảng có 5 cột — kéo ngang để xem thêm.</p>
+        <div class="gl-table-scroll" data-gl-table-scroll data-gl-scroll-hint="{{ hint_id }}" tabindex="0" role="region" aria-label="Danh sách khách lưu trú">
+          <table class="gl-table gl-table--client gl-table--guests">
+            <thead>
+              <tr>
+                <th scope="col">STT</th>
+                <th scope="col">Khách</th>
+                <th scope="col">Loại khách</th>
+                <th scope="col">CMND / CCCD</th>
+                <th scope="col">Địa chỉ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for g in slip.guests %}
+              <tr>
+                <td class="gl-tabular">{{ loop.index }}</td>
+                <td>{{ g.name | default('—') }}</td>
+                <td>{{ g.guest_type_label | default('—') }}</td>
+                <td class="gl-tabular">{{ g.id_number | default('—') }}</td>
+                <td>{{ g.address | default('—') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+    {% set empty_title = 'Chưa có phiếu thuê phòng nào' %}
+    {% set empty_desc = 'Phiếu thuê phòng của bạn sẽ xuất hiện tại đây khi có thông tin lưu trú.' %}
+    {% set empty_cta_label = 'Về Trang chủ' %}
+    {% set empty_cta_href = url_for('index') %}
+    {% include 'partials/_empty_state.html' %}
+  {% endif %}
+</div>
+{% endblock %}

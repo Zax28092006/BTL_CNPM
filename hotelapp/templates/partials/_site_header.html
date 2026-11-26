@@ -1,0 +1,147 @@
+{% set current_endpoint = request.endpoint if (request is defined and request.endpoint) else '' %}
+{% if active_nav is defined and active_nav != '' %}
+  {% set current_nav = active_nav %}
+{% elif current_nav_key is defined %}
+  {% set current_nav = current_nav_key %}
+{% elif current_endpoint == 'index' %}
+  {% set current_nav = 'home' %}
+{% else %}
+  {% set current_nav = '' %}
+{% endif %}
+
+{% set brand_href = url_for('index') if url_for else '/' %}
+{% set header_container_cls = header_container_class | default('gl-container--public') %}
+{% set show_cta = show_primary_cta if show_primary_cta is defined else true %}
+{% set rooms_href = rooms_nav_href if (rooms_nav_href is defined and rooms_nav_href) else (room_search_url if (room_search_url is defined and room_search_url) else (brand_href ~ '#homeRooms')) %}
+{% set policy_href = policy_nav_href if (policy_nav_href is defined and policy_nav_href) else (policy_page_url if (policy_page_url is defined and policy_page_url) else '#roomPolicyTitle') %}
+{% set contact_href = contact_nav_href if (contact_nav_href is defined and contact_nav_href) else (contact_page_url if (contact_page_url is defined and contact_page_url) else '#footerInfo') %}
+{% set default_cta_href = rooms_href %}
+{% set cta_href = primary_cta_href if (primary_cta_href is defined and primary_cta_href) else default_cta_href %}
+{% set cta_label = primary_cta_label | default('Đặt phòng') %}
+
+{% set nav_items = custom_nav_items if (custom_nav_items is defined and custom_nav_items) else [
+  {'key': 'home', 'label': 'Trang chủ', 'href': home_nav_href | default(brand_href)},
+  {'key': 'rooms', 'label': 'Phòng', 'href': rooms_href},
+  {'key': 'policy', 'label': 'Quy định', 'href': policy_href},
+  {'key': 'contact', 'label': 'Liên hệ', 'href': contact_href}
+] %}
+
+{% set display_account_name = (current_user.name if (current_user is defined and current_user.is_authenticated and current_user.name) else (current_user.username if (current_user is defined and current_user.is_authenticated and current_user.username) else 'Tài khoản')) %}
+{% set c_urls = client_nav_urls | default({}) %}
+
+<header class="gl-site-header gl-site-header--sticky">
+  <div class="gl-container {{ header_container_cls }} gl-header-bar">
+    {% include 'partials/_brand_lockup.html' %}
+
+    <nav class="d-none d-lg-block" aria-label="Điều hướng chính">
+      <ul class="gl-nav-list">
+        {% for item in nav_items %}
+        <li>
+          <a class="gl-nav-link {{ 'is-active' if current_nav == item.key else '' }}"
+             href="{{ item.href }}"
+             {% if current_nav == item.key %}aria-current="page"{% endif %}>{{ item.label }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <div id="clientSessionArea"
+         class="d-none d-lg-flex gl-header-actions"
+         data-gl-auth-state="{{ 'authenticated' if current_user is defined and current_user.is_authenticated else 'guest' }}">
+      {% if current_user is defined and current_user.is_authenticated %}
+      <div class="dropdown">
+        <button id="clientAccountMenuBtn"
+                type="button"
+                class="gl-btn gl-btn--sm gl-btn-tertiary dropdown-toggle"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">
+          {{ display_account_name }}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end gl-dropdown-menu" aria-labelledby="clientAccountMenuBtn">
+          {% if c_urls.get('bookings') %}
+          <li><a class="dropdown-item" href="{{ c_urls.get('bookings') }}">Đặt phòng của tôi</a></li>
+          {% else %}
+          <li><span class="dropdown-item disabled">Đặt phòng của tôi</span></li>
+          {% endif %}
+          {% if c_urls.get('rental_slips') %}
+          <li><a class="dropdown-item" href="{{ c_urls.get('rental_slips') }}">Phiếu thuê</a></li>
+          {% else %}
+          <li><span class="dropdown-item disabled">Phiếu thuê</span></li>
+          {% endif %}
+          {% if c_urls.get('invoice') %}
+          <li><a class="dropdown-item" href="{{ c_urls.get('invoice') }}">Hóa đơn</a></li>
+          {% else %}
+          <li><span class="dropdown-item disabled">Hóa đơn</span></li>
+          {% endif %}
+          {% if c_urls.get('profile') %}
+          <li><a class="dropdown-item" href="{{ c_urls.get('profile') }}">Hồ sơ</a></li>
+          {% else %}
+          <li><span class="dropdown-item disabled">Hồ sơ</span></li>
+          {% endif %}
+          <li><hr class="dropdown-divider"></li>
+          <li><a id="clientAuthAction" class="dropdown-item" href="{{ url_for('logout_view') }}">Đăng xuất</a></li>
+        </ul>
+      </div>
+      {% else %}
+        <a id="clientAuthAction" class="gl-btn gl-btn--sm gl-btn-tertiary" href="{{ url_for('login_view') }}">Đăng nhập</a>
+      {% endif %}
+
+      {% if show_cta %}
+      <a class="btn gl-btn btn-primary gl-btn--sm" href="{{ cta_href }}">{{ cta_label }}</a>
+      {% endif %}
+    </div>
+
+    <button class="gl-menu-toggle d-lg-none"
+            type="button"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#mobileNavDrawer"
+            aria-controls="mobileNavDrawer"
+            aria-label="Mở trình đơn điều hướng">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="offcanvas offcanvas-end gl-offcanvas d-lg-none" tabindex="-1" id="mobileNavDrawer" aria-labelledby="mobileNavDrawerTitle">
+  <div class="offcanvas-header">
+    <span class="gl-wordmark gl-wordmark--on-dark" id="mobileNavDrawerTitle">THE VALENTIA</span>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng trình đơn"></button>
+  </div>
+  <div class="offcanvas-body">
+    <nav aria-label="Điều hướng di động">
+      <ul class="gl-mobile-nav-list">
+        {% for item in nav_items %}
+        <li><a class="{{ 'is-active' if current_nav == item.key else '' }}" href="{{ item.href }}" {% if current_nav == item.key %}aria-current="page"{% endif %} data-bs-dismiss="offcanvas">{{ item.label }}</a></li>
+        {% endfor %}
+        {% if current_user is defined and current_user.is_authenticated %}
+          {% if c_urls.get('bookings') %}
+          <li><a href="{{ c_urls.get('bookings') }}" data-bs-dismiss="offcanvas">Đặt phòng của tôi</a></li>
+          {% endif %}
+          {% if c_urls.get('rental_slips') %}
+          <li><a href="{{ c_urls.get('rental_slips') }}" data-bs-dismiss="offcanvas">Phiếu thuê</a></li>
+          {% endif %}
+          {% if c_urls.get('invoice') %}
+          <li><a href="{{ c_urls.get('invoice') }}" data-bs-dismiss="offcanvas">Hóa đơn</a></li>
+          {% endif %}
+          {% if c_urls.get('profile') %}
+          <li><a href="{{ c_urls.get('profile') }}" data-bs-dismiss="offcanvas">Hồ sơ</a></li>
+          {% endif %}
+        {% endif %}
+      </ul>
+    </nav>
+    <div class="d-grid gap-2">
+      {% if show_cta %}
+      <a class="btn gl-btn btn-primary" href="{{ cta_href }}" data-bs-dismiss="offcanvas">{{ cta_label }}</a>
+      {% endif %}
+      {% if current_user is defined and current_user.is_authenticated %}
+        <a class="btn gl-btn gl-btn-secondary" href="{{ url_for('logout_view') }}">Đăng xuất ({{ display_account_name }})</a>
+      {% else %}
+        <a class="btn gl-btn gl-btn-secondary" href="{{ url_for('login_view') }}">Đăng nhập</a>
+      {% endif %}
+    </div>
+  </div>
+</div>

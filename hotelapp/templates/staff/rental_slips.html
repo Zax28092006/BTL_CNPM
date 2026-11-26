@@ -1,0 +1,191 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 's03' %}
+{% set can_view_staff = is_staff_authorized | default(false) %}
+{% set filter_url = rental_slips_url | default('') %}
+{% set current_kw = (request.args.get('kw', '') if request is defined else '') %}
+{% set current_checkin = (request.args.get('checkin_date', '') if request is defined else '') %}
+{% set current_rental_status = (request.args.get('rental_status', '') if request is defined else '') %}
+{% set current_payment_status = (request.args.get('payment_status', '') if request is defined else '') %}
+
+{% block title %}Danh sách phiếu thuê (S03) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Nghiệp vụ Lễ tân{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" crossorigin="anonymous">
+{% endblock %}
+
+{% block content %}
+<div class="gl-page-head">
+  <div>
+    <h1 class="mb-1">Danh sách phiếu thuê phòng</h1>
+    <p class="gl-helper mb-0">Theo dõi tình trạng lưu trú và thanh toán tách biệt cho từng phiếu thuê.</p>
+  </div>
+</div>
+
+{% if not can_view_staff %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Nhân viên lễ tân</div>
+  <p class="mb-2">Vui lòng đăng nhập bằng tài khoản Nhân viên hoặc Quản trị viên để xem danh sách phiếu thuê.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  <form id="s03FilterForm" class="gl-toolbar row g-2 align-items-end" method="get" action="{{ filter_url }}" novalidate>
+    <div class="col-12 col-md-3">
+      <label class="gl-label" for="s03Kw">Từ khóa</label>
+      <input id="s03Kw" name="kw" type="search" class="form-control gl-input" value="{{ current_kw }}" placeholder="Mã phiếu, tên khách hoặc phòng">
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label class="gl-label" for="s03DateDisplay">Ngày nhận phòng</label>
+      <div class="gl-date-input-wrap">
+        <input id="s03DateDisplay"
+               type="text"
+               class="form-control gl-input gl-tabular gl-date-input"
+               placeholder="dd/mm/yyyy"
+               autocomplete="off">
+        <button type="button" class="gl-date-input-icon" data-gl-open-picker="s03DateDisplay" aria-label="Mở lịch chọn ngày nhận phòng">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </button>
+      </div>
+      <input id="s03Date" name="checkin_date" type="hidden" value="{{ current_checkin }}">
+    </div>
+    <div class="col-6 col-sm-6 col-md-2">
+      <label class="gl-label" for="s03Status">Tình trạng thuê</label>
+      <select id="s03Status" name="rental_status" class="form-select gl-select">
+        <option value="">Tất cả</option>
+        {% for st in rental_statuses | default([]) %}
+        <option value="{{ st.value }}" {{ 'selected' if current_rental_status == st.value else '' }}>{{ st.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-sm-6 col-md-2">
+      <label class="gl-label" for="s03PayStatus">Thanh toán</label>
+      <select id="s03PayStatus" name="payment_status" class="form-select gl-select">
+        <option value="">Tất cả</option>
+        {% for st in payment_statuses | default([]) %}
+        <option value="{{ st.value }}" {{ 'selected' if current_payment_status == st.value else '' }}>{{ st.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-auto">
+      <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Lọc</button>
+    </div>
+  </form>
+
+  <div id="s03FilterNotice" class="gl-alert gl-alert--info mb-4" role="status" hidden>
+    Chức năng lọc danh sách phiếu thuê hiện đang được cập nhật.
+  </div>
+
+  {% if slips_error is defined and slips_error %}
+  <div class="gl-alert gl-alert--danger" role="alert">{{ slips_error }}</div>
+  {% elif rental_slips is defined and rental_slips %}
+  <div class="gl-table-wrap">
+    <p id="s03ScrollHint" class="gl-table-scroll-hint" hidden>Bảng có 7 cột — kéo ngang để xem thêm.</p>
+    <div class="gl-table-scroll" data-gl-table-scroll data-gl-scroll-hint="s03ScrollHint" tabindex="0" role="region" aria-label="Danh sách phiếu thuê phòng">
+      <table class="gl-table gl-table--staff gl-table--wide-7">
+        <thead>
+          <tr>
+            <th scope="col" class="gl-col-sticky">Mã phiếu</th>
+            <th scope="col">Khách đại diện</th>
+            <th scope="col">Phòng</th>
+            <th scope="col">Ngày lưu trú</th>
+            <th scope="col" class="table-numeric">Số khách</th>
+            <th scope="col">Thanh toán</th>
+            <th scope="col">Tình trạng thuê</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in rental_slips %}
+          <tr>
+            <td class="gl-col-sticky">
+              <button type="button"
+                      class="gl-btn gl-btn--sm gl-btn-tertiary px-1 gl-tabular"
+                      data-gl-open-slip
+                      data-gl-slip='{{ s | tojson }}'>{{ s.code | default('Chi tiết') }}</button>
+            </td>
+            <td>{{ s.customer_name | default('—') }}</td>
+            <td>{{ s.room_name | default('—') }}</td>
+            <td class="gl-tabular">{{ s.check_in_display | default('—') }} – {{ s.check_out_display | default('—') }}</td>
+            <td class="table-numeric gl-tabular">{{ s.guest_count | default('—') }}</td>
+            <td>
+              {% set chip_state = s.payment_status | default('') %}
+              {% set chip_label = s.payment_status_label | default('') %}
+              {% include 'partials/_status_chip.html' %}
+            </td>
+            <td>
+              {% set chip_state = s.rental_status | default('') %}
+              {% set chip_label = s.rental_status_label | default('') %}
+              {% include 'partials/_status_chip.html' %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+    {% set empty_title = 'Chưa có phiếu thuê phòng nào' %}
+    {% set empty_desc = 'Danh sách phiếu thuê đang được quản lý sẽ hiển thị tại đây khi phát sinh giao dịch.' %}
+    {% include 'partials/_empty_state.html' %}
+  {% endif %}
+{% endif %}
+
+<div id="rentalDetailDrawer" class="gl-drawer-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerSlipCode" hidden>
+  <div class="gl-drawer-panel">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+      <h2 class="h3 mb-0">Chi tiết phiếu <span id="drawerSlipCode" class="gl-tabular">—</span></h2>
+      <button id="closeRentalDrawerBtn" type="button" class="btn-close" aria-label="Đóng chi tiết"></button>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Khách đại diện</span>
+      <span id="drawerSlipGuest" class="gl-folio__value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Phòng</span>
+      <span id="drawerSlipRoom" class="gl-folio__value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Thời gian</span>
+      <span id="drawerSlipDates" class="gl-folio__value gl-tabular">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Số khách</span>
+      <span id="drawerSlipGuestCount" class="gl-folio__value gl-tabular">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Thanh toán</span>
+      <span id="drawerSlipPayStatus" class="gl-folio__value">—</span>
+    </div>
+    <div class="gl-folio__row gl-folio__row--dotted">
+      <span class="gl-folio__label">Tình trạng thuê</span>
+      <span id="drawerSlipRentalStatus" class="gl-folio__value">—</span>
+    </div>
+    <div id="drawerSlipTotalRow" class="gl-folio__row gl-folio__row--total" hidden>
+      <span class="gl-folio__label">Tổng tiền</span>
+      <span id="drawerSlipTotal" class="gl-folio__total-value price-value">—</span>
+    </div>
+
+    <div id="drawerSlipGuestsSection" class="mt-3 pt-3 border-top" hidden>
+      <h3 class="h6 text-uppercase mb-2">Khách lưu trú</h3>
+      <ul id="drawerSlipGuestsList" class="gl-list-compact mb-0"></ul>
+    </div>
+
+    <div class="d-grid gap-2 mt-4">
+      <a id="drawerPayLink" class="btn btn-primary gl-btn" href="/" hidden>Ghi nhận thanh toán</a>
+      <button type="button" class="gl-btn gl-btn-secondary" data-gl-print-trigger>In phiếu / hóa đơn</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/vn.js" crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='js/date-utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/staff-pages.js') }}"></script>
+{% endblock %}

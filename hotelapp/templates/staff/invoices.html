@@ -1,0 +1,121 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 's05' %}
+{% set can_view_staff = is_staff_authorized | default(false) %}
+{% set search_url = invoices_search_url | default('') %}
+{% set current_kw = (request.args.get('kw', '') if request is defined else '') %}
+{% set current_pay_status = (request.args.get('payment_status', '') if request is defined else '') %}
+
+{% block title %}Hóa đơn (S05) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Nghiệp vụ Lễ tân{% endblock %}
+
+{% block content %}
+<div class="gl-page-head gl-no-print">
+  <div>
+    <h1 class="mb-1">Hóa đơn thanh toán</h1>
+    <p class="gl-helper mb-0">Tra cứu, xem chi tiết và in hóa đơn theo chuẩn khổ giấy A4.</p>
+  </div>
+</div>
+
+{% if not can_view_staff %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Nhân viên lễ tân</div>
+  <p class="mb-2">Vui lòng đăng nhập bằng tài khoản Nhân viên hoặc Quản trị viên để xem và in hóa đơn.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  <form id="s05SearchForm" class="gl-toolbar row g-2 align-items-end gl-no-print" method="get" action="{{ search_url }}" novalidate>
+    <div class="col-12 col-md-5">
+      <label class="gl-label" for="s05Kw">Từ khóa hóa đơn</label>
+      <input id="s05Kw" name="kw" type="search" class="form-control gl-input" value="{{ current_kw }}" placeholder="Mã hóa đơn, tên khách hoặc SĐT">
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label class="gl-label" for="s05PayStatus">Trạng thái thanh toán</label>
+      <select id="s05PayStatus" name="payment_status" class="form-select gl-select">
+        <option value="">Tất cả</option>
+        {% for st in payment_statuses | default([]) %}
+        <option value="{{ st.value }}" {{ 'selected' if current_pay_status == st.value else '' }}>{{ st.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-auto">
+      <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Tìm hóa đơn</button>
+    </div>
+  </form>
+
+  <div id="s05SearchNotice" class="gl-alert gl-alert--info mb-4 gl-no-print" role="status" hidden>
+    Chức năng tra cứu danh sách hóa đơn hiện đang được cập nhật.
+  </div>
+
+  {% if invoices_error is defined and invoices_error %}
+  <div class="gl-alert gl-alert--danger" role="alert">{{ invoices_error }}</div>
+  {% elif (invoices_list is defined and invoices_list) or (invoice is defined and invoice) %}
+  <div class="row g-4 align-items-start">
+    {% if invoices_list is defined and invoices_list %}
+    <div class="col-12 col-xl-5 gl-no-print">
+      <div class="gl-table-wrap">
+        <div class="gl-table-scroll" tabindex="0" role="region" aria-label="Danh sách hóa đơn">
+          <table class="gl-table gl-table--staff">
+            <thead>
+              <tr>
+                <th scope="col">Mã HĐ</th>
+                <th scope="col">Khách hàng</th>
+                <th scope="col" class="table-numeric">Tổng tiền</th>
+                <th scope="col">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inv_item in invoices_list %}
+              <tr class="{{ 'table-active' if (invoice is defined and invoice and invoice.code == inv_item.code) else '' }}">
+                <td class="gl-tabular">
+                  {% if inv_item.detail_url %}
+                  <a href="{{ inv_item.detail_url }}">{{ inv_item.code | default('—') }}</a>
+                  {% else %}
+                  {{ inv_item.code | default('—') }}
+                  {% endif %}
+                  {% if inv_item.booking_code or inv_item.rental_slip_code %}
+                  <div class="gl-helper mt-0 mb-0 gl-tabular">
+                    {{ inv_item.booking_code | default('') }}{% if inv_item.booking_code and inv_item.rental_slip_code %} · {% endif %}{{ inv_item.rental_slip_code | default('') }}
+                  </div>
+                  {% endif %}
+                </td>
+                <td>{{ inv_item.customer_name | default('—') }}</td>
+                <td class="table-numeric price-value">{{ inv_item.total_display | default('—') }}</td>
+                <td>
+                  {% set chip_state = inv_item.payment_status | default('') %}
+                  {% set chip_label = inv_item.payment_status_label | default('') %}
+                  {% include 'partials/_status_chip.html' %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="col-12 {{ 'col-xl-7' if (invoices_list is defined and invoices_list) else 'col-lg-8' }}">
+      {% if invoice is defined and invoice %}
+      <div class="d-flex justify-content-end mb-3 gl-no-print">
+        <button type="button" class="btn btn-primary gl-btn gl-btn--sm" data-gl-print-trigger>In hóa đơn</button>
+      </div>
+      {% include 'partials/_invoice_folio.html' %}
+      {% else %}
+        {% set empty_title = 'Chọn hóa đơn để xem chi tiết' %}
+        {% set empty_desc = 'Chọn một mã hóa đơn trong danh sách bên cạnh để hiển thị bản chi tiết và in khổ A4.' %}
+        {% include 'partials/_empty_state.html' %}
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+    {% set empty_title = 'Chưa có hóa đơn để hiển thị' %}
+    {% set empty_desc = 'Thông tin hóa đơn sẽ được hiển thị tại đây sau khi phát sinh giao dịch.' %}
+    {% include 'partials/_empty_state.html' %}
+  {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/staff-pages.js') }}"></script>
+{% endblock %}

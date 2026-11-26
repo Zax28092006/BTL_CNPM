@@ -1,0 +1,112 @@
+{% extends 'public/base_public.html' %}
+
+{% set active_nav = 'policy' %}
+{% set home_url = url_for('index') %}
+{% set home_nav_href = home_url %}
+{% set rooms_href = room_search_url if (room_search_url is defined and room_search_url) else (home_url ~ '#homeRooms') %}
+{% set policy_href = policy_page_url if (policy_page_url is defined and policy_page_url) else '#mainContent' %}
+{% set contact_href = contact_page_url if (contact_page_url is defined and contact_page_url) else '#footerInfo' %}
+{% set rooms_nav_href = rooms_href %}
+{% set policy_nav_href = policy_href %}
+{% set contact_nav_href = contact_href %}
+{% set policy_link = policy_href %}
+{% set footer_extra_class = 'gl-footer--home' %}
+{% set footer_show_stay_info = false %}
+
+{% set advance_days_val = rules.advance_days if (rules is defined and rules and rules.advance_days is defined) else 28 %}
+{% set surcharge_val = rules.surcharge_rate if (rules is defined and rules and rules.surcharge_rate is defined) else 25 %}
+{% set foreign_val = rules.foreign_factor if (rules is defined and rules and rules.foreign_factor is defined) else '1,5' %}
+{% set max_guests_cfg = rules.max_guests if (rules is defined and rules and rules.max_guests is defined and rules.max_guests) else (max_guests if (max_guests is defined and max_guests) else none) %}
+{% set stay_info = hotel_stay_info if (hotel_stay_info is defined and hotel_stay_info) else none %}
+
+{% block title %}Quy định lưu trú — The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block content %}
+<div class="gl-room-detail">
+  <div class="gl-container gl-container--public">
+    <nav aria-label="Đường dẫn trang" class="mb-3">
+      <ol class="gl-breadcrumb mb-0">
+        <li><a href="{{ home_url }}">Trang chủ</a></li>
+        <li aria-hidden="true">/</li>
+        <li class="gl-breadcrumb__current" aria-current="page">Quy định lưu trú</li>
+      </ol>
+    </nav>
+
+    <div class="mb-4">
+      <h1 class="gl-room-title mb-2">Quy định lưu trú</h1>
+      <p class="gl-home-section__note mb-0">
+        Thông tin quy định áp dụng cho quá trình đặt phòng, đăng ký khách lưu trú và thanh toán tại The Valentia Hotel &amp; Suites.
+      </p>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12 col-md-6">
+        <section class="gl-policy-card h-100" aria-labelledby="policySec1">
+          <h2 id="policySec1" class="h4 mb-3">
+            <span class="gl-policy-num gl-tabular">1</span>Quy định đặt phòng
+          </h2>
+          <ul class="gl-list-compact mb-0">
+            <li>Mỗi phiếu đặt phòng trực tuyến áp dụng cho <strong>01 phòng</strong>.</li>
+            <li>Thời điểm nhận phòng không vượt quá <strong class="gl-tabular">{{ advance_days_val }} ngày</strong> kể từ ngày đặt phòng.</li>
+            <li>Thông tin đặt phòng cần được xác nhận hợp lệ trước khi lập phiếu thuê tại quầy.</li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <section class="gl-policy-card h-100" aria-labelledby="policySec2">
+          <h2 id="policySec2" class="h4 mb-3">
+            <span class="gl-policy-num gl-tabular">2</span>Quy định giá phòng &amp; phụ thu
+          </h2>
+          <ul class="gl-list-compact mb-0">
+            <li>Đơn giá cơ bản áp dụng cho tiêu chuẩn <strong>2 khách</strong>.</li>
+            <li>Khách thứ 3 trong phòng áp dụng phụ thu <strong class="gl-tabular">{{ surcharge_val }}%</strong> theo cấu hình hiện hành.</li>
+            <li>Phòng có khách nước ngoài lưu trú áp dụng hệ số <strong class="gl-tabular">{{ foreign_val }}</strong>.</li>
+            <li>Số tiền thanh toán chính thức được xác nhận theo dữ liệu từ hệ thống khi hoàn tất thủ tục.</li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <section class="gl-policy-card h-100" aria-labelledby="policySec3">
+          <h2 id="policySec3" class="h4 mb-3">
+            <span class="gl-policy-num gl-tabular">3</span>Quy định khách lưu trú
+          </h2>
+          <ul class="gl-list-compact mb-0">
+            <li>Khi đặt phòng hoặc nhận phòng cần khai báo đầy đủ họ tên, loại khách (nội địa hoặc nước ngoài), giấy tờ tùy thân (CMND/CCCD/Hộ chiếu) và địa chỉ.</li>
+            {% if max_guests_cfg %}
+            <li>Số lượng khách tối đa mỗi phòng theo cấu hình hiện hành: <strong class="gl-tabular">{{ max_guests_cfg }} khách</strong>.</li>
+            {% else %}
+            <li>Số lượng khách tối đa mỗi phòng áp dụng theo cấu hình thực tế của từng hạng phòng.</li>
+            {% endif %}
+          </ul>
+        </section>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <section class="gl-policy-card h-100" aria-labelledby="policySec4">
+          <h2 id="policySec4" class="h4 mb-3">
+            <span class="gl-policy-num gl-tabular">4</span>Nhận/trả phòng &amp; thanh toán
+          </h2>
+          <ul class="gl-list-compact mb-0">
+            {% if stay_info and (stay_info.checkin_time or stay_info.checkout_time) %}
+            <li>
+              {% if stay_info.checkin_time %}Giờ nhận phòng từ <strong class="gl-tabular">{{ stay_info.checkin_time }}</strong>{% endif %}
+              {% if stay_info.checkin_time and stay_info.checkout_time %} · {% endif %}
+              {% if stay_info.checkout_time %}trả phòng trước <strong class="gl-tabular">{{ stay_info.checkout_time }}</strong>{% endif %}.
+            </li>
+            {% else %}
+            <li>Thủ tục nhận phòng được thực hiện tại quầy lễ tân khi đối chiếu phiếu đặt phòng hoặc đăng ký trực tiếp.</li>
+            {% endif %}
+            <li>Bước nhập thông tin người đặt &amp; khách lưu trú không thu tiền trước; thanh toán thực hiện tại quầy (Tiền mặt / Chuyển khoản) hoặc trực tuyến sau khi phát sinh hóa đơn.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-2">
+      <a class="btn btn-primary gl-btn" href="{{ rooms_href }}">Xem các hạng phòng</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

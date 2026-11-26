@@ -1,0 +1,135 @@
+{% from 'partials/_room_card.html' import render_room_card %}
+{% from 'partials/_room_gallery_manifest.html' import room_tier_catalog, room_assets_by_number, resolve_room_number, resolve_room_tier_key %}
+
+{% macro render_room_tier_sections(source_items, mode='p01', search_performed=false, search_summary=none, current_checkin='', current_checkout='', status_map={}, booking_url_fallback='') %}
+  {% set has_custom_items = (source_items is defined and source_items is not none and (source_items | length) > 0) %}
+
+  {% for tier in room_tier_catalog %}
+    {% set ns = namespace(cards=[]) %}
+    {% if not has_custom_items %}
+      {% for rnum in tier.room_numbers %}
+        {% set asset_entry = room_assets_by_number.get(rnum) %}
+        {% if asset_entry %}
+          {% set _ = ns.cards.append({
+            'id': '',
+            'room_number': rnum,
+            'tier_key': tier.tier_key,
+            'tier_label': tier.tier_label,
+            'type_name': tier.name,
+            'segment_label': tier.segment_label,
+            'name': 'Phòng ' ~ rnum,
+            'description': tier.description,
+            'image_url': asset_entry.cover,
+            'image_alt': asset_entry.images[0].alt if asset_entry.images else ('Phòng ' ~ rnum),
+            'images': asset_entry.images,
+            'is_low_res': false,
+            'is_reference': true,
+            'gallery_caption': 'Ảnh của Phòng ' ~ rnum ~ ' (' ~ (asset_entry.images | length) ~ ' ảnh)',
+            'detail_url': (room_detail_base_url ~ rnum) if (room_detail_base_url is defined and room_detail_base_url) else '',
+            'booking_url': ''
+          }) %}
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      {% for item in source_items %}
+        {% if (resolve_room_tier_key(item) | trim) == tier.tier_key %}
+          {% set item_rnum = resolve_room_number(item) | trim %}
+          {% set asset_entry = room_assets_by_number.get(item_rnum) if item_rnum else none %}
+          {% set room_gallery = item.images if (item.images is defined and item.images) else (asset_entry.images if asset_entry else []) %}
+          {% set card_img_url = item.image_url if (item.image_url is defined and item.image_url) else (asset_entry.cover if asset_entry else (room_gallery[0].url if room_gallery else '')) %}
+          {% set _ = ns.cards.append({
+            'id': item.id if item.id is defined else '',
+            'room_number': item_rnum,
+            'tier_key': tier.tier_key,
+            'tier_label': item.tier_label | default(tier.tier_label),
+            'type_name': item.type_name | default(tier.name),
+            'segment_label': item.segment_label | default(tier.segment_label),
+            'name': item.name | default(('Phòng ' ~ item_rnum) if item_rnum else tier.name),
+            'description': item.description | default(tier.description),
+            'size': item.size if item.size is defined else none,
+            'bed_type': item.bed_type | default(''),
+            'guest_count': item.guest_count if item.guest_count is defined else none,
+            'floor': item.floor if item.floor is defined else none,
+            'highlight': item.highlight | default(''),
+            'features': item.features | default([]),
+            'bathroom_amenities': item.bathroom_amenities | default([]),
+            'view_amenities': item.view_amenities | default([]),
+            'room_amenities': item.room_amenities | default([]),
+            'amenity_groups': item.amenity_groups | default([]),
+            'amenities': item.amenities | default([]),
+            'price': item.price if item.price is defined else none,
+            'original_price': item.original_price if item.original_price is defined else (item.list_price if item.list_price is defined else (item.price if item.price is defined else none)),
+            'list_price': item.list_price if item.list_price is defined else (item.original_price if item.original_price is defined else (item.price if item.price is defined else none)),
+            'final_price': item.final_price if item.final_price is defined else (item.discounted_price if item.discounted_price is defined else none),
+            'discounted_price': item.discounted_price if item.discounted_price is defined else (item.final_price if item.final_price is defined else none),
+            'discount_percent': item.discount_percent if item.discount_percent is defined else none,
+            'promotion_status': item.promotion_status | default(''),
+            'promotion_name': item.promotion_name | default(''),
+            'promotion_condition': item.promotion_condition | default(''),
+            'savings_amount': item.savings_amount if item.savings_amount is defined else none,
+            'promotion': item.promotion if (item.promotion is defined and item.promotion is mapping) else none,
+            'price_display': item.price_display | default(''),
+            'date_rate_note': item.date_rate_note | default(''),
+            'estimated_total': item.estimated_total if item.estimated_total is defined else none,
+            'subtotal': item.subtotal if item.subtotal is defined else none,
+            'base_guest_note': item.base_guest_note | default(''),
+            'availability_state': item.availability_state | default(''),
+            'availability_label': item.availability_label | default(''),
+            'availability_chip_class': item.availability_chip_class | default('gl-chip--neutral'),
+            'image_url': card_img_url,
+            'image_alt': item.image_alt | default(item.name | default(tier.name)),
+            'images': room_gallery,
+            'is_low_res': false,
+            'is_reference': item.is_reference | default(false),
+            'gallery_caption': item.gallery_caption | default(('Ảnh của ' ~ (item.name | default('Phòng ' ~ item_rnum)) ~ ' (' ~ (room_gallery | length) ~ ' ảnh)') if room_gallery else ''),
+            'detail_url': item.detail_url | default(''),
+            'booking_url': item.booking_url | default(booking_url_fallback)
+          }) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% if (ns.cards | length) > 0 %}
+    <div class="gl-tier-group" data-gl-tier-group="{{ tier.tier_key }}">
+      <div class="gl-tier-group__head">
+        <div>
+          <span class="gl-home-room-card__tier">{{ tier.tier_label }} · {{ tier.segment_label }}</span>
+          <h3 class="gl-tier-group__title">{{ tier.name }}</h3>
+        </div>
+        <span class="gl-tier-group__count gl-tabular">{{ ns.cards | length }} phòng</span>
+      </div>
+      <div class="row row-cols-1 row-cols-md-3 g-3 g-lg-4">
+        {% for card in ns.cards %}
+          {{ render_room_card(card, mode, search_performed, search_summary, current_checkin, current_checkout, status_map, booking_url_fallback) }}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  {% if has_custom_items %}
+    {% set other_ns = namespace(cards=[]) %}
+    {% for item in source_items %}
+      {% set rk = resolve_room_tier_key(item) | trim %}
+      {% if rk not in ['hang_a', 'hang_b', 'hang_c'] %}
+        {% set _ = other_ns.cards.append(item) %}
+      {% endif %}
+    {% endfor %}
+    {% if (other_ns.cards | length) > 0 %}
+    <div class="gl-tier-group" data-gl-tier-group="other">
+      <div class="gl-tier-group__head">
+        <div>
+          <span class="gl-home-room-card__tier">HẠNG KHÁC</span>
+          <h3 class="gl-tier-group__title">Phòng khác</h3>
+        </div>
+        <span class="gl-tier-group__count gl-tabular">{{ other_ns.cards | length }} phòng</span>
+      </div>
+      <div class="row row-cols-1 row-cols-md-3 g-3 g-lg-4">
+        {% for card in other_ns.cards %}
+          {{ render_room_card(card, mode, search_performed, search_summary, current_checkin, current_checkout, status_map, booking_url_fallback) }}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  {% endif %}
+{% endmacro %}

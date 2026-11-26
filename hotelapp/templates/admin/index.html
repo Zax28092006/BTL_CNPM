@@ -1,0 +1,704 @@
+{% extends 'staff/base_staff.html' %}
+{% from 'partials/_price_display.html' import render_price_block, extract_pricing_ns, format_vnd %}
+{% from 'partials/_room_gallery_manifest.html' import room_assets_by_number, resolve_room_number %}
+
+{% set active_staff_nav = 'a01' %}
+{% set is_emp_admin = current_user is defined and current_user.is_authenticated and (current_user.role is defined and (current_user.role.name == 'ADMIN' if current_user.role.name is defined else current_user.role == 'ADMIN')) %}
+{% set can_view_admin = is_admin_authorized | default(is_emp_admin) %}
+{% set filter_url = admin_rooms_url | default('') %}
+{% set create_url = room_create_url | default('') %}
+{% set upload_url = room_gallery_upload_url | default('') %}
+{% set price_save_url = room_price_update_url | default('') %}
+{% set promo_save_url = promotion_create_url | default('') %}
+{% set supports_extended = admin_supports_extended_room_fields | default(false) %}
+{% set current_kw = (request.args.get('kw', '') if request is defined else '') %}
+{% set current_state = (request.args.get('state', '') if request is defined else '') %}
+{% set current_tier = (request.args.get('tier', '') if request is defined else '') %}
+{% set rooms_list = rooms | default([]) %}
+{% set promos_list = promotions | default([]) %}
+{% set default_room_codes = ['301', '302', '303', '201', '202', '203', '101', '102', '103'] %}
+
+{% block title %}Quản lý phòng, giá &amp; ưu đãi (A01) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Quản trị hệ thống{% endblock %}
+
+{% block content %}
+<div class="gl-page-head">
+  <div>
+    <h1 class="mb-1">Quản lý phòng, giá và ưu đãi</h1>
+    <p class="gl-helper mb-0">Quản lý danh mục 9 phòng, bộ ảnh gallery, giá niêm yết theo từng phòng và chương trình ưu đãi.</p>
+  </div>
+  {% if can_view_admin %}
+  <button id="openAddRoomBtn"
+          type="button"
+          class="btn btn-primary gl-btn gl-btn--sm"
+          data-gl-create-url="{{ create_url }}">
+    + Thêm phòng
+  </button>
+  {% endif %}
+</div>
+
+{% if not can_view_admin %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Quản trị viên</div>
+  <p class="mb-2">Bạn chưa đăng nhập bằng tài khoản Quản trị viên hoặc phiên làm việc chưa được xác thực quyền quản trị.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  {% if admin_message is defined and admin_message %}
+  <div class="gl-alert gl-alert--success mb-4" role="status">{{ admin_message }}</div>
+  {% endif %}
+  {% if delete_error is defined and delete_error %}
+  <div class="gl-alert gl-alert--danger mb-4" role="alert">
+    <div class="gl-alert__title">Không thể xóa phòng</div>
+    <p class="mb-0">{{ delete_error }}</p>
+  </div>
+  {% elif admin_error is defined and admin_error %}
+  <div class="gl-alert gl-alert--danger mb-4" role="alert">{{ admin_error }}</div>
+  {% endif %}
+
+  <div class="gl-tab-bar" role="tablist" data-gl-tablist aria-label="Phân hệ quản lý phòng và giá">
+    <button id="a01TabBtnRooms" type="button" class="gl-tab-btn is-active" role="tab" aria-selected="true" aria-controls="a01TabRooms">Danh sách phòng</button>
+    <button id="a01TabBtnAdd" type="button" class="gl-tab-btn" role="tab" aria-selected="false" aria-controls="a01TabAddRoom">Thêm phòng</button>
+    <button id="a01TabBtnPricing" type="button" class="gl-tab-btn" role="tab" aria-selected="false" aria-controls="a01TabPricing">Giá phòng</button>
+    <button id="a01TabBtnPromos" type="button" class="gl-tab-btn" role="tab" aria-selected="false" aria-controls="a01TabPromos">Ưu đãi</button>
+  </div>
+
+  {# ================= TAB 1: DANH SÁCH PHÒNG ================= #}
+  <section id="a01TabRooms" role="tabpanel" aria-labelledby="a01TabBtnRooms" class="mb-4">
+    <form id="a01FilterForm" class="gl-toolbar row g-2 align-items-end" method="get" action="{{ filter_url }}" novalidate>
+      <div class="col-12 col-md-4">
+        <label class="gl-label" for="a01SearchKw">Mã phòng / Tên phòng</label>
+        <input id="a01SearchKw" name="kw" type="search" class="form-control gl-input" value="{{ current_kw }}" placeholder="Tìm theo mã hoặc tên phòng (vd: 101)">
+      </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <label class="gl-label" for="a01TierFilter">Hạng phòng</label>
+        <select id="a01TierFilter" name="tier" class="form-select gl-select">
+          <option value="">Tất cả hạng</option>
+          <option value="hang_a" {{ 'selected' if current_tier == 'hang_a' else '' }}>Hạng A · Suite gia đình</option>
+          <option value="hang_b" {{ 'selected' if current_tier == 'hang_b' else '' }}>Hạng B · Phòng cao cấp</option>
+          <option value="hang_c" {{ 'selected' if current_tier == 'hang_c' else '' }}>Hạng C · Phòng tiêu chuẩn</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <label class="gl-label" for="a01StateFilter">Tình trạng phòng</label>
+        <select id="a01StateFilter" name="state" class="form-select gl-select">
+          <option value="">Tất cả tình trạng</option>
+          {% for st in room_states | default([
+            {'value': 'AVAILABLE', 'label': 'Trống'},
+            {'value': 'FULL', 'label': 'Đang có khách'},
+            {'value': 'RESERVED', 'label': 'Đã đặt'},
+            {'value': 'MAINTENANCE', 'label': 'Bảo trì'}
+          ]) %}
+          <option value="{{ st.value }}" {{ 'selected' if current_state == st.value else '' }}>{{ st.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-auto">
+        <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Lọc</button>
+      </div>
+    </form>
+
+    <div id="a01FilterNotice" class="gl-alert gl-alert--info mb-4" role="status" hidden>
+      Chức năng lọc danh sách phòng hiện chưa kết nối.
+    </div>
+
+    {% if rooms_list %}
+    <div class="gl-table-wrap">
+      <p id="a01ScrollHint" class="gl-table-scroll-hint" hidden>Bảng có 9 cột — kéo ngang để xem thêm.</p>
+      <div class="gl-table-scroll" data-gl-table-scroll data-gl-scroll-hint="a01ScrollHint" tabindex="0" role="region" aria-label="Danh sách phòng khách sạn">
+        <table class="gl-table gl-table--staff gl-table--wide-8">
+          <thead>
+            <tr>
+              <th scope="col" class="gl-col-sticky">Mã phòng</th>
+              <th scope="col">Hạng phòng</th>
+              <th scope="col">Ảnh đại diện</th>
+              <th scope="col" class="table-numeric">Giá niêm yết</th>
+              <th scope="col">Ưu đãi hiện tại</th>
+              <th scope="col" class="table-numeric">Giá sau ưu đãi</th>
+              <th scope="col">Trạng thái phòng</th>
+              <th scope="col">Ngày cập nhật</th>
+              <th scope="col">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rooms_list %}
+            {% set rnum = (resolve_room_number(r) | trim) %}
+            {% set asset_entry = room_assets_by_number.get(rnum) if rnum else none %}
+            {% set thumb_url = r.image_url if (r.image_url is defined and r.image_url) else (asset_entry.cover if asset_entry else '') %}
+            {% set rp = namespace() %}
+            {{ extract_pricing_ns(r, rp) }}
+            <tr>
+              <td class="gl-col-sticky fw-semibold gl-tabular">{{ r.room_number | default(rnum if rnum else r.id) }}</td>
+              <td>
+                <div class="fw-semibold">{{ r.name }}</div>
+                <div class="gl-helper mt-0 mb-0">{{ r.type_name | default(r.tier_label | default('—')) }}</div>
+              </td>
+              <td>
+                {% if thumb_url %}
+                <img class="gl-a01-room-thumb" src="{{ thumb_url }}" alt="{{ r.name }}">
+                {% else %}
+                <span class="gl-helper mb-0">Chưa có ảnh</span>
+                {% endif %}
+              </td>
+              <td class="table-numeric price-value">
+                {% if rp.has_price %}
+                  {% if rp.has_active_promo %}
+                  <del class="gl-price-original">{{ format_vnd(rp.original_price) }}</del>
+                  {% else %}
+                  {{ format_vnd(rp.original_price) }}
+                  {% endif %}
+                {% else %}
+                  {{ r.price_display | default('—') }}
+                {% endif %}
+              </td>
+              <td>
+                {% if rp.has_active_promo %}
+                  <span class="gl-promo-badge gl-tabular">-{{ "%.0f"|format(rp.discount_percent) }}%</span>
+                  {% if rp.promo_name %}
+                  <div class="gl-helper mt-1 mb-0">{{ rp.promo_name }}</div>
+                  {% endif %}
+                {% elif rp.raw_status in ['expired', 'ended'] %}
+                  <span class="gl-chip gl-chip--neutral">Hết hạn</span>
+                {% else %}
+                  <span class="gl-helper mb-0">Không có</span>
+                {% endif %}
+              </td>
+              <td class="table-numeric price-value">
+                {% if rp.has_price %}
+                  <span class="{{ 'gl-price-current--promo' if rp.has_active_promo else '' }}">
+                    {{ format_vnd(rp.final_price) }}/đêm
+                  </span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% set chip_state = r.state | default('') %}
+                {% set chip_label = r.state_label | default('') %}
+                {% include 'partials/_status_chip.html' %}
+              </td>
+              <td class="gl-tabular">{{ r.updated_at_display | default('—') }}</td>
+              <td>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button"
+                          class="gl-btn gl-btn--sm gl-btn-secondary"
+                          data-gl-edit-room
+                          data-gl-update-url="{{ r.update_url | default('') }}"
+                          data-gl-room='{{ r | tojson }}'>Sửa</button>
+                  <button type="button"
+                          class="gl-btn gl-btn--sm gl-btn-secondary"
+                          data-gl-jump-price
+                          data-gl-room-id="{{ r.id | default(r.room_number) }}"
+                          data-gl-room='{{ r | tojson }}'>Chỉnh giá</button>
+                  <button type="button"
+                          class="gl-btn gl-btn--sm gl-btn-danger-outline"
+                          data-bs-toggle="modal"
+                          data-bs-target="#deleteRoomModal"
+                          data-gl-delete-room
+                          data-gl-delete-url="{{ r.delete_url | default('') }}"
+                          data-gl-room-name="{{ r.name }}">Xóa</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+      {% set empty_title = 'Chưa có dữ liệu phòng' %}
+      {% set empty_desc = 'Hiện chưa có dữ liệu phòng để hiển thị.' %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  </section>
+
+  {# ================= TAB 2: THÊM PHÒNG & GALLERY ================= #}
+  <section id="a01TabAddRoom" role="tabpanel" aria-labelledby="a01TabBtnAdd" class="gl-panel mb-4" hidden>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div>
+        <h2 class="h3 mb-1">Thêm phòng mới &amp; Quản lý gallery ảnh</h2>
+        <p class="gl-helper mb-0">Điền thông tin phòng và chuẩn bị bộ ảnh trước khi lưu.</p>
+      </div>
+      {% if not create_url %}
+      <span class="gl-chip gl-chip--warning">Chưa kết nối lưu phòng</span>
+      {% endif %}
+    </div>
+
+    <div id="a01AddRoomNotice" class="gl-alert gl-alert--info mb-3" role="status" hidden>
+      Thông tin đã hợp lệ, nhưng chức năng tạo phòng và tải ảnh hiện chưa kết nối.
+    </div>
+
+    <form id="a01CreateRoomForm"
+          method="post"
+          action="{{ create_url }}"
+          enctype="multipart/form-data"
+          data-gl-create-url="{{ create_url }}"
+          data-gl-upload-url="{{ upload_url }}"
+          data-gl-supports-extended-fields="{{ 'true' if supports_extended else 'false' }}"
+          novalidate>
+      <div class="row g-3">
+        <div class="col-12 col-sm-4 col-lg-3">
+          <label class="gl-label" for="addRoomNumber">Số phòng</label>
+          <input id="addRoomNumber" name="room_number" type="text" class="form-control gl-input gl-tabular" placeholder="Vd: 101" data-gl-extended-field="true">
+        </div>
+        <div class="col-12 col-sm-8 col-lg-4">
+          <label class="gl-label" for="addRoomTier">Hạng phòng</label>
+          <select id="addRoomTier" name="tier_key" class="form-select gl-select" data-gl-extended-field="true">
+            <option value="hang_a">Hạng A · Suite gia đình</option>
+            <option value="hang_b">Hạng B · Phòng cao cấp</option>
+            <option value="hang_c" selected>Hạng C · Phòng tiêu chuẩn</option>
+          </select>
+        </div>
+        <div class="col-12 col-lg-5">
+          <label class="gl-label" for="addRoomName">Tên hiển thị <span class="gl-required-mark">*</span></label>
+          <input id="addRoomName" name="name" type="text" class="form-control gl-input" placeholder="Vd: Phòng 101" required>
+          <p id="addRoomNameError" class="gl-field-error" hidden></p>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="gl-label" for="addRoomPrice">Giá niêm yết (VNĐ/đêm) <span class="gl-required-mark">*</span></label>
+          <input id="addRoomPrice" name="price" type="number" min="0" step="1000" class="form-control gl-input gl-tabular" placeholder="Vd: 950000" required>
+          <p id="addRoomPricePreview" class="gl-helper mb-0"></p>
+          <p id="addRoomPriceError" class="gl-field-error" hidden></p>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="gl-label" for="addRoomState">Trạng thái phòng</label>
+          <select id="addRoomState" name="state" class="form-select gl-select">
+            <option value="AVAILABLE">Trống</option>
+            <option value="RESERVED">Đã đặt</option>
+            <option value="FULL">Đang có khách</option>
+            <option value="MAINTENANCE">Bảo trì</option>
+          </select>
+        </div>
+        <div class="col-4 col-md-2">
+          <label class="gl-label" for="addRoomSize">Diện tích (m²)</label>
+          <input id="addRoomSize" name="size" type="number" min="1" class="form-control gl-input gl-tabular" placeholder="28">
+        </div>
+        <div class="col-4 col-md-1">
+          <label class="gl-label" for="addRoomFloor">Tầng</label>
+          <input id="addRoomFloor" name="floor_chua" type="number" min="1" class="form-control gl-input gl-tabular" placeholder="1">
+        </div>
+        <div class="col-4 col-md-1">
+          <label class="gl-label" for="addRoomGuests">Khách</label>
+          <input id="addRoomGuests" name="guest_count" type="number" min="1" max="6" class="form-control gl-input gl-tabular" value="3">
+          <p id="addRoomGuestsError" class="gl-field-error" hidden></p>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label class="gl-label" for="addRoomBedType">Loại giường</label>
+          <input id="addRoomBedType" name="bed_type" type="text" class="form-control gl-input" placeholder="Vd: Giường đôi tiêu chuẩn" data-gl-extended-field="true">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="gl-label" for="addRoomView">Hướng nhìn</label>
+          <input id="addRoomView" name="view_amenities" type="text" class="form-control gl-input" placeholder="Vd: Cửa sổ hướng phố" data-gl-extended-field="true">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="gl-label" for="addRoomAmenities">Tiện nghi phòng (ngăn cách dấu phẩy)</label>
+          <input id="addRoomAmenities" name="room_amenities" type="text" class="form-control gl-input" placeholder="Máy điều hòa, TV màn hình phẳng, Wi-Fi" data-gl-extended-field="true">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="gl-label" for="addRoomBathroom">Tiện nghi phòng tắm (ngăn cách dấu phẩy)</label>
+          <input id="addRoomBathroom" name="bathroom_amenities" type="text" class="form-control gl-input" placeholder="Vòi sen, Khăn tắm, Máy sấy tóc" data-gl-extended-field="true">
+        </div>
+        <div class="col-12">
+          <label class="gl-label" for="addRoomDesc">Mô tả chi tiết</label>
+          <textarea id="addRoomDesc" name="description" class="form-control gl-input gl-textarea" rows="3"></textarea>
+        </div>
+
+        <div class="col-12">
+          <label class="gl-label" for="addRoomGalleryFiles">Gallery ảnh phòng (JPG, PNG, WEBP · tối đa 5 MB/ảnh)</label>
+          <input id="addRoomGalleryFiles" name="gallery_files" type="file" accept="image/jpeg,image/png,image/webp" multiple class="form-control gl-input" data-gl-extended-field="true">
+          <p id="addRoomGalleryError" class="gl-field-error" hidden></p>
+          <div id="addRoomGalleryPreview" class="gl-a01-gallery-grid" hidden></div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 mt-4">
+        <button id="a01CreateSubmitBtn" type="submit" class="btn btn-primary gl-btn">Lưu phòng mới</button>
+        <button id="a01CreateResetBtn" type="reset" class="gl-btn gl-btn-secondary">Làm mới biểu mẫu</button>
+      </div>
+    </form>
+  </section>
+
+  {# ================= TAB 3: QUẢN LÝ GIÁ PHÒNG ================= #}
+  <section id="a01TabPricing" role="tabpanel" aria-labelledby="a01TabBtnPricing" class="gl-panel mb-4" hidden>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div>
+        <h2 class="h3 mb-1">Quản lý giá niêm yết theo phòng</h2>
+        <p class="gl-helper mb-0">Cập nhật đơn giá từng phòng độc lập (VNĐ/đêm).</p>
+      </div>
+      {% if not price_save_url %}
+      <span class="gl-chip gl-chip--warning">Chưa kết nối cập nhật giá</span>
+      {% endif %}
+    </div>
+
+    <div id="a01PriceSaveNotice" class="gl-alert gl-alert--info mb-3" role="status" hidden></div>
+    <div id="a01PriceErrorAlert" class="gl-alert gl-alert--danger mb-3" role="alert" hidden></div>
+
+    <form id="a01PriceForm"
+          method="post"
+          action="{{ price_save_url }}"
+          data-gl-default-action="{{ price_save_url }}"
+          novalidate>
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="gl-label" for="priceTargetRoom">Phòng cần chỉnh giá <span class="gl-required-mark">*</span></label>
+          <select id="priceTargetRoom" name="room_id" class="form-select gl-select" required>
+            <option value="">Chọn phòng từ danh sách</option>
+            {% if rooms_list %}
+              {% for r in rooms_list %}
+              {% set rp = namespace() %}
+              {{ extract_pricing_ns(r, rp) }}
+              <option value="{{ r.id | default(r.room_number) }}"
+                      data-gl-room-number="{{ r.room_number | default(resolve_room_number(r) | trim) }}"
+                      data-gl-type-name="{{ r.type_name | default('') }}"
+                      data-gl-current-price="{{ rp.original_price if rp.has_price else '' }}"
+                      data-gl-price-url="{{ r.price_update_url | default(price_save_url) }}">
+                {{ r.name }}{% if r.type_name %} ({{ r.type_name }}){% endif %}
+              </option>
+              {% endfor %}
+            {% else %}
+              {% for code in default_room_codes %}
+              <option value="" disabled>{{ 'Phòng ' ~ code ~ ' (chưa có dữ liệu)' }}</option>
+              {% endfor %}
+            {% endif %}
+          </select>
+          <p id="priceTargetRoomError" class="gl-field-error" hidden></p>
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-2">
+          <label class="gl-label" for="priceCurrentDisplay">Giá niêm yết hiện tại</label>
+          <input id="priceCurrentDisplay" type="text" class="form-control gl-input gl-tabular" value="—" readonly>
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="gl-label" for="priceNewInput">Giá niêm yết mới (VNĐ/đêm) <span class="gl-required-mark">*</span></label>
+          <input id="priceNewInput" name="list_price" type="number" min="0" step="1000" class="form-control gl-input gl-tabular" placeholder="Vd: 950000" required>
+          <p id="priceNewFormatted" class="gl-helper mb-0"></p>
+          <p id="priceNewInputError" class="gl-field-error" hidden></p>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <label class="gl-label" for="priceEffectiveDate">Ngày hiệu lực</label>
+          <input id="priceEffectiveDate" name="effective_date" type="date" class="form-control gl-input gl-tabular">
+        </div>
+
+        <div class="col-12 col-md-9">
+          <label class="gl-label" for="priceReasonInput">Ghi chú / Lý do điều chỉnh</label>
+          <input id="priceReasonInput" name="reason" type="text" class="form-control gl-input" placeholder="Vd: Cập nhật bảng giá khởi điểm theo hạng phòng">
+        </div>
+
+        <div class="col-12 col-md-3">
+          <button id="a01PriceSubmitBtn" type="submit" class="btn btn-primary gl-btn w-100">Cập nhật giá phòng</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  {# ================= TAB 4: QUẢN LÝ ƯU ĐÃI ================= #}
+  <section id="a01TabPromos" role="tabpanel" aria-labelledby="a01TabBtnPromos" class="mb-4" hidden>
+    <div class="gl-panel mb-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <h2 class="h3 mb-1">Chương trình ưu đãi đang cấu hình</h2>
+          <p class="gl-helper mb-0">Ưu đãi được áp dụng trực tiếp từ dữ liệu hệ thống; không cộng dồn nhiều ưu đãi.</p>
+        </div>
+        {% if not promo_save_url %}
+        <span class="gl-chip gl-chip--warning">Chưa kết nối ưu đãi</span>
+        {% endif %}
+      </div>
+
+      {% if promos_list %}
+      <div class="gl-table-wrap">
+        <div class="gl-table-scroll" tabindex="0" role="region" aria-label="Danh sách chương trình ưu đãi">
+          <table class="gl-table gl-table--staff">
+            <thead>
+              <tr>
+                <th scope="col">Tên chương trình</th>
+                <th scope="col" class="table-numeric">Mức giảm</th>
+                <th scope="col">Phạm vi áp dụng</th>
+                <th scope="col">Thời gian</th>
+                <th scope="col">Trạng thái</th>
+                <th scope="col">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pr in promos_list %}
+              <tr>
+                <td class="fw-semibold">{{ pr.name }}</td>
+                <td class="table-numeric"><span class="gl-promo-badge gl-tabular">-{{ "%.0f"|format(pr.discount_percent | float) }}%</span></td>
+                <td>{{ pr.scope_display | default('—') }}</td>
+                <td class="gl-tabular">{{ pr.start_date | default('—') }} → {{ pr.end_date | default('—') }}</td>
+                <td>
+                  {% set chip_state = 'available' if pr.is_active else 'neutral' %}
+                  {% set chip_label = pr.status_label | default('Đang bật' if pr.is_active else 'Đang tắt') %}
+                  {% include 'partials/_status_chip.html' %}
+                </td>
+                <td>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button type="button"
+                            class="gl-btn gl-btn--sm gl-btn-secondary"
+                            data-gl-edit-promo
+                            data-gl-promo='{{ pr | tojson }}'>Sửa</button>
+                    <button type="button"
+                            class="gl-btn gl-btn--sm gl-btn-secondary"
+                            data-gl-toggle-promo
+                            data-gl-action-url="{{ pr.toggle_url | default('') }}"
+                            data-gl-promo-name="{{ pr.name }}">
+                      {{ 'Tắt' if pr.is_active else 'Bật' }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+        {% set empty_title = 'Chưa có dữ liệu ưu đãi' %}
+        {% set empty_desc = 'Hiện chưa có chương trình ưu đãi nào được lưu.' %}
+        {% include 'partials/_empty_state.html' %}
+      {% endif %}
+    </div>
+
+    <div class="gl-panel">
+      <h2 id="a01PromoFormTitle" class="h3 mb-3">Tạo / Chỉnh sửa ưu đãi &amp; Xem trước giá sau giảm</h2>
+
+      <div id="a01PromoNotice" class="gl-alert gl-alert--info mb-3" role="status" hidden></div>
+      <div id="a01PromoErrorAlert" class="gl-alert gl-alert--danger mb-3" role="alert" hidden></div>
+
+      <form id="a01PromoForm"
+            method="post"
+            action="{{ promo_save_url }}"
+            data-gl-default-action="{{ promo_save_url }}"
+            data-gl-rooms='{{ rooms_list | tojson }}'
+            novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="gl-label" for="promoNameInput">Tên chương trình ưu đãi <span class="gl-required-mark">*</span></label>
+            <input id="promoNameInput" name="name" type="text" class="form-control gl-input" placeholder="Vd: Ưu đãi Phòng tiêu chuẩn -20%" required>
+            <p id="promoNameError" class="gl-field-error" hidden></p>
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="gl-label" for="promoTypeDisplay">Hình thức giảm</label>
+            <input id="promoTypeDisplay" type="text" class="form-control gl-input" value="Phần trăm (%)" readonly>
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="gl-label" for="promoPercentInput">Mức giảm (%) <span class="gl-required-mark">*</span></label>
+            <input id="promoPercentInput" name="discount_percent" type="number" min="1" max="100" step="1" class="form-control gl-input gl-tabular" placeholder="1–100" required>
+            <p id="promoPercentError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="gl-label" for="promoScopeSelect">Phạm vi áp dụng</label>
+            <select id="promoScopeSelect" name="scope_type" class="form-select gl-select">
+              <option value="room_type">Toàn bộ một hạng phòng</option>
+              <option value="multiple_rooms">Nhiều phòng được chọn</option>
+              <option value="single_room">Một phòng cụ thể</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="gl-label" for="promoStartDate">Ngày bắt đầu <span class="gl-required-mark">*</span></label>
+            <input id="promoStartDate" name="start_date" type="date" class="form-control gl-input gl-tabular" required>
+            <p id="promoStartDateError" class="gl-field-error" hidden></p>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="gl-label" for="promoEndDate">Ngày kết thúc <span class="gl-required-mark">*</span></label>
+            <input id="promoEndDate" name="end_date" type="date" class="form-control gl-input gl-tabular" required>
+            <p id="promoEndDateError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div id="promoTierWrap" class="col-12 col-md-6">
+            <label class="gl-label" for="promoTierSelect">Chọn hạng phòng áp dụng</label>
+            <select id="promoTierSelect" name="tier_key" class="form-select gl-select">
+              <option value="hang_c">Hạng C · Phòng tiêu chuẩn (101, 102, 103)</option>
+              <option value="hang_b">Hạng B · Phòng cao cấp (201, 202, 203)</option>
+              <option value="hang_a">Hạng A · Suite gia đình (301, 302, 303)</option>
+            </select>
+          </div>
+
+          <div id="promoSingleWrap" class="col-12 col-md-6" hidden>
+            <label class="gl-label" for="promoSingleSelect">Chọn 1 phòng áp dụng</label>
+            <select id="promoSingleSelect" name="room_id" class="form-select gl-select">
+              {% for code in default_room_codes %}
+              <option value="{{ code }}">Phòng {{ code }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div id="promoMultiWrap" class="col-12" hidden>
+            <span class="gl-label">Chọn các phòng áp dụng ưu đãi</span>
+            <div class="gl-a01-scope-grid">
+              {% for code in default_room_codes %}
+              <label class="form-check border rounded px-3 py-2 bg-white">
+                <input class="form-check-input promo-room-checkbox" type="checkbox" name="room_ids" value="{{ code }}">
+                <span class="form-check-label gl-tabular">Phòng {{ code }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <p id="promoRoomsError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div class="col-12 col-md-8">
+            <label class="gl-label" for="promoConditionInput">Ghi chú / Điều kiện áp dụng</label>
+            <input id="promoConditionInput" name="condition" type="text" class="form-control gl-input" placeholder="Vd: Không cộng dồn với các ưu đãi khác">
+          </div>
+          <div class="col-12 col-md-4 d-flex align-items-end">
+            <label class="form-check mb-2">
+              <input id="promoActiveCheck" name="is_active" type="checkbox" class="form-check-input" checked>
+              <span class="form-check-label">Kích hoạt ưu đãi ngay khi hợp lệ</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-top">
+          <h3 class="h5 mb-1">Xem trước giá sau giảm (UI Preview)</h3>
+          <p class="gl-helper mb-3">
+            Giá xem trước giúp Admin đối chiếu trực quan trước khi lưu.
+          </p>
+          <div id="a01PromoOverlapWarn" class="gl-alert gl-alert--info mb-3" role="status" hidden></div>
+          <div id="a01PromoPreviewGrid" class="gl-a01-preview-grid"></div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-4">
+          <button id="a01PromoSubmitBtn" type="submit" class="btn btn-primary gl-btn">Lưu chương trình ưu đãi</button>
+          <button id="a01PromoResetBtn" type="button" class="gl-btn gl-btn-secondary">Đặt lại</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {# ================= TRẠNG THÁI KẾT NỐI CHỨC NĂNG ================= #}
+  <details id="a01ConnectionStatusPanel" class="gl-panel">
+    <summary class="fw-semibold" style="cursor:pointer;">Trạng thái kết nối chức năng (Quản lý phòng, giá &amp; ưu đãi)</summary>
+    <div class="gl-table-wrap mt-3">
+      <table class="gl-table gl-table--staff">
+        <thead>
+          <tr>
+            <th scope="col">Chức năng</th>
+            <th scope="col">Cấu hình đường dẫn</th>
+            <th scope="col">Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Thêm phòng mới (model cơ bản)</td>
+            <td><code>room_create_url</code></td>
+            <td>{{ 'Đã kết nối' if create_url else 'Chưa kết nối' }}</td>
+          </tr>
+          <tr>
+            <td>Cập nhật giá niêm yết theo phòng</td>
+            <td><code>room_price_update_url</code> / <code>room.price_update_url</code></td>
+            <td>{{ 'Đã kết nối' if price_save_url else 'Chưa kết nối' }}</td>
+          </tr>
+          <tr>
+            <td>Tạo / Sửa / Bật tắt ưu đãi</td>
+            <td><code>promotion_create_url</code>, <code>toggle_url</code></td>
+            <td>{{ 'Đã kết nối' if promo_save_url else 'Chưa kết nối' }}</td>
+          </tr>
+          <tr>
+            <td>Upload &amp; lưu thứ tự gallery ảnh phòng</td>
+            <td><code>room_gallery_upload_url</code></td>
+            <td>{{ 'Đã kết nối' if upload_url else 'Chưa kết nối' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+{% endif %}
+
+{# Backward-compatible Room Editor Drawer (Create / Quick Edit) #}
+<div id="roomEditorDrawer" class="gl-drawer-backdrop" role="dialog" aria-modal="true" aria-labelledby="roomDrawerTitle" hidden>
+  <div class="gl-drawer-panel">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+      <h2 id="roomDrawerTitle" class="h3 mb-0">Thông tin phòng</h2>
+      <button id="closeRoomDrawerBtn" type="button" class="btn-close" aria-label="Đóng"></button>
+    </div>
+
+    <div id="a01RoomSaveNotice" class="gl-alert gl-alert--info mb-3" role="status" hidden>
+      Thông tin phòng đã hợp lệ. Chức năng lưu danh mục phòng hiện chưa kết nối.
+    </div>
+
+    <form id="roomEditorForm"
+          method="post"
+          action=""
+          data-gl-supports-extended-fields="{{ 'true' if supports_extended else 'false' }}"
+          novalidate>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="gl-label" for="roomFieldName">Tên phòng <span class="gl-required-mark">*</span></label>
+          <input id="roomFieldName" name="name" type="text" class="form-control gl-input" required>
+          <p id="roomFieldNameError" class="gl-field-error" hidden></p>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="gl-label" for="roomFieldPrice">Đơn giá niêm yết (VNĐ)</label>
+          <input id="roomFieldPrice" name="price" type="number" min="0" class="form-control gl-input gl-tabular">
+          <p id="roomFieldPriceError" class="gl-field-error" hidden></p>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="gl-label" for="roomFieldState">Tình trạng phòng</label>
+          <select id="roomFieldState" name="state" class="form-select gl-select">
+            <option value="AVAILABLE">Trống</option>
+            <option value="FULL">Đang có khách</option>
+            <option value="MAINTENANCE">Bảo trì</option>
+            <option value="RESERVED">Đã đặt</option>
+          </select>
+        </div>
+        <div class="col-4">
+          <label class="gl-label" for="roomFieldSize">Diện tích (m²)</label>
+          <input id="roomFieldSize" name="size" type="number" min="1" class="form-control gl-input gl-tabular">
+        </div>
+        <div class="col-4">
+          <label class="gl-label" for="roomFieldFloor">Tầng</label>
+          <input id="roomFieldFloor" name="floor_chua" type="number" min="1" class="form-control gl-input gl-tabular">
+        </div>
+        <div class="col-4">
+          <label class="gl-label" for="roomFieldGuests">Số khách</label>
+          <input id="roomFieldGuests" name="guest_count" type="number" min="1" class="form-control gl-input gl-tabular">
+          <p id="roomFieldGuestsError" class="gl-field-error" hidden></p>
+        </div>
+        <div class="col-12">
+          <label class="gl-label" for="roomFieldDesc">Mô tả</label>
+          <textarea id="roomFieldDesc" name="description" class="form-control gl-input gl-textarea" rows="3"></textarea>
+        </div>
+        <div class="col-12">
+          <span class="gl-label">Bộ ảnh hiện tại</span>
+          <div id="drawerGalleryPreview" class="gl-a01-gallery-grid"></div>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary gl-btn">Lưu thông tin phòng</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteRoomModal" tabindex="-1" aria-labelledby="deleteRoomModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="deleteRoomModalLabel">Xác nhận xóa phòng</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Xóa <strong id="deleteRoomName">phòng này</strong>? Hành động này không thể hoàn tác và chỉ thực hiện khi phòng không còn phiếu đặt hoặc phiếu thuê đang hoạt động.</p>
+        <div id="a01DeleteNotice" class="gl-alert gl-alert--info mb-0" role="status" hidden>
+          Chức năng xóa phòng hiện chưa kết nối.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="deleteRoomForm" method="post" action="">
+          <button type="submit" class="gl-btn gl-btn--sm gl-btn-danger-outline">Xóa phòng</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/admin-pages.js') }}"></script>
+{% endblock %}

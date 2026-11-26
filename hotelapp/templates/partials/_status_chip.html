@@ -1,0 +1,32 @@
+{# Reusable status chip partial (G11) — preserves exact status value when unmapped #}
+{% set raw_key = (chip_state | default(chip_label | default(''))) | string | lower | trim %}
+{% set chip_map = {
+  'available': {'label': 'Còn phòng', 'cls': 'gl-chip--success'},
+  'confirmed': {'label': 'Đã xác nhận', 'cls': 'gl-chip--success'},
+  'paid': {'label': 'Đã thanh toán', 'cls': 'gl-chip--success'},
+  'completed': {'label': 'Hoàn tất', 'cls': 'gl-chip--success'},
+  'checked_in': {'label': 'Đang thuê', 'cls': 'gl-chip--info'},
+  'renting': {'label': 'Đang thuê', 'cls': 'gl-chip--info'},
+  'active': {'label': 'Hoạt động', 'cls': 'gl-chip--success'},
+  'reserved': {'label': 'Đã đặt', 'cls': 'gl-chip--booked'},
+  'booked': {'label': 'Đã đặt', 'cls': 'gl-chip--booked'},
+  'maintenance': {'label': 'Bảo trì', 'cls': 'gl-chip--warning'},
+  'pending': {'label': 'Chờ xử lý', 'cls': 'gl-chip--warning'},
+  'manual_confirmation': {'label': 'Chờ lễ tân xác nhận', 'cls': 'gl-chip--warning'},
+  'needs_confirmation': {'label': 'Chờ lễ tân xác nhận', 'cls': 'gl-chip--warning'},
+  'low_availability': {'label': 'Còn ít phòng', 'cls': 'gl-chip--warning'},
+  'cần xác nhận': {'label': 'Chờ lễ tân xác nhận', 'cls': 'gl-chip--warning'},
+  'unpaid': {'label': 'Chưa thanh toán', 'cls': 'gl-chip--danger'},
+  'locked': {'label': 'Đã khóa', 'cls': 'gl-chip--danger'},
+  'full': {'label': 'Hết phòng', 'cls': 'gl-chip--danger'},
+  'unavailable': {'label': 'Hết phòng', 'cls': 'gl-chip--danger'},
+  'cancelled': {'label': 'Đã hủy', 'cls': 'gl-chip--danger'},
+  'canceled': {'label': 'Đã hủy', 'cls': 'gl-chip--danger'},
+  'checked_out': {'label': 'Đã trả phòng', 'cls': 'gl-chip--neutral'}
+} %}
+{% set resolved = chip_map.get(raw_key) %}
+{% set final_label = chip_label if (chip_label is defined and chip_label) else (resolved.label if resolved else chip_state) %}
+{% set final_cls = chip_class if (chip_class is defined and chip_class) else (resolved.cls if resolved else 'gl-chip--neutral') %}
+{% if final_label %}
+<span class="gl-chip {{ final_cls }}">{{ final_label }}</span>
+{% endif %}

@@ -1,0 +1,160 @@
+{# Shared Complete Room Specs & Amenities Blocks (reused by P03 and aligned 1-to-1 with Quick-View Modal) #}
+{# Renders only sections that have verified data; hides missing sections gracefully. Never displays reviews. #}
+{% macro feature_icon(label) -%}
+  {%- set low = label | string | lower -%}
+  {%- if 'cảnh' in low or 'view' in low or 'hướng' in low -%}
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.5"></circle></svg>
+  {%- elif 'điều hòa' in low or 'máy lạnh' in low -%}
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9L4.9 19.1"></path></svg>
+  {%- elif 'tắm' in low or 'vòi sen' in low -%}
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3z"></path><path d="M7 12V6a2 2 0 0 1 4 0"></path></svg>
+  {%- elif 'tv' in low or 'tivi' in low -%}
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="2" y="5" width="20" height="13" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line></svg>
+  {%- elif 'wi-fi' in low or 'wifi' in low -%}
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+  {%- else -%}
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_complete_room_info(room, heading_tag='h2') %}
+{% if room.features is defined and room.features %}
+<section class="gl-room-section gl-room-section--compact" aria-label="Điểm nổi bật">
+  <ul class="gl-qv-feature-list mb-0">
+    {% for feat in room.features %}
+    {% if feat %}
+    <li class="gl-qv-feature-chip">
+      {{ feature_icon(feat) }}
+      <span>{{ feat }}</span>
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if room.tier_label or room.size or room.bed_type or room.guest_count or room.floor %}
+<section id="roomSpecs" class="gl-room-section" aria-labelledby="roomSpecsTitle">
+  <{{ heading_tag }} id="roomSpecsTitle" class="gl-room-subhead">Thông số hạng phòng</{{ heading_tag }}>
+  <dl class="gl-spec-list gl-spec-list--icons">
+    {% if room.tier_label %}
+    <div class="gl-spec-list__item">
+      <dt class="gl-spec-list__term">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+        <span>Hạng phòng</span>
+      </dt>
+      <dd class="gl-spec-list__desc">{{ room.tier_label }}</dd>
+    </div>
+    {% endif %}
+    {% if room.size %}
+    <div class="gl-spec-list__item">
+      <dt class="gl-spec-list__term">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+        <span>Kích thước phòng</span>
+      </dt>
+      <dd class="gl-spec-list__desc gl-tabular">{{ room.size }} m²</dd>
+    </div>
+    {% endif %}
+    {% if room.bed_type %}
+    <div class="gl-spec-list__item">
+      <dt class="gl-spec-list__term">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 7v13"></path><path d="M22 12v8"></path><path d="M2 16h20"></path><path d="M6 12h6a4 4 0 0 1 4 4v0H6v-4z"></path></svg>
+        <span>Loại giường</span>
+      </dt>
+      <dd class="gl-spec-list__desc">{{ room.bed_type }}</dd>
+    </div>
+    {% endif %}
+    {% if room.guest_count %}
+    <div class="gl-spec-list__item">
+      <dt class="gl-spec-list__term">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Sức chứa tối đa</span>
+      </dt>
+      <dd class="gl-spec-list__desc gl-tabular">Tối đa {{ room.guest_count }} khách</dd>
+    </div>
+    {% endif %}
+    {% if room.floor %}
+    <div class="gl-spec-list__item">
+      <dt class="gl-spec-list__term">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="1"></rect><line x1="9" y1="6" x2="9.01" y2="6"></line><line x1="15" y1="6" x2="15.01" y2="6"></line><line x1="9" y1="10" x2="9.01" y2="10"></line><line x1="15" y1="10" x2="15.01" y2="10"></line></svg>
+        <span>Vị trí</span>
+      </dt>
+      <dd class="gl-spec-list__desc gl-tabular">Tầng {{ room.floor }}</dd>
+    </div>
+    {% endif %}
+  </dl>
+</section>
+{% endif %}
+
+{% if room.description %}
+<section class="gl-room-section" aria-labelledby="roomDescTitle">
+  <{{ heading_tag }} id="roomDescTitle" class="gl-room-subhead">Mô tả phòng</{{ heading_tag }}>
+  <p class="gl-room-copy mb-0">{{ room.description }}</p>
+</section>
+{% endif %}
+
+{% set bath_list = room.bathroom_amenities if (room.bathroom_amenities is defined and room.bathroom_amenities) else [] %}
+{% set view_list = room.view_amenities if (room.view_amenities is defined and room.view_amenities) else [] %}
+{% set room_amen_list = room.room_amenities if (room.room_amenities is defined and room.room_amenities) else (room.amenities if (room.amenities is defined and room.amenities) else []) %}
+{% set custom_groups = room.amenity_groups if (room.amenity_groups is defined and room.amenity_groups) else [] %}
+
+{% if bath_list %}
+<section id="roomBathroomAmenities" class="gl-room-section" aria-labelledby="roomBathroomTitle">
+  <{{ heading_tag }} id="roomBathroomTitle" class="gl-room-subhead">Trong phòng tắm riêng</{{ heading_tag }}>
+  <ul class="gl-qv-amenity-grid gl-qv-amenity-grid--detail">
+    {% for item in bath_list %}
+    <li class="gl-qv-amenity-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>{{ item }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if view_list %}
+<section id="roomViewAmenities" class="gl-room-section" aria-labelledby="roomViewTitle">
+  <{{ heading_tag }} id="roomViewTitle" class="gl-room-subhead">Hướng tầm nhìn</{{ heading_tag }}>
+  <ul class="gl-qv-amenity-grid gl-qv-amenity-grid--detail">
+    {% for item in view_list %}
+    <li class="gl-qv-amenity-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>{{ item }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if room_amen_list %}
+<section id="roomGeneralAmenities" class="gl-room-section" aria-labelledby="roomAmenitiesTitle">
+  <{{ heading_tag }} id="roomAmenitiesTitle" class="gl-room-subhead">Tiện nghi</{{ heading_tag }}>
+  <ul class="gl-qv-amenity-grid gl-qv-amenity-grid--detail">
+    {% for item in room_amen_list %}
+    <li class="gl-qv-amenity-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>{{ item }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if custom_groups and not bath_list and not view_list and not room_amen_list %}
+  {% for grp in custom_groups %}
+  {% if grp and grp.items %}
+  <section class="gl-room-section">
+    <{{ heading_tag }} class="gl-room-subhead">{{ grp.title | default('Tiện nghi') }}</{{ heading_tag }}>
+    <ul class="gl-qv-amenity-grid gl-qv-amenity-grid--detail">
+      {% for item in grp.items %}
+      <li class="gl-qv-amenity-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>{{ item }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% endfor %}
+{% endif %}
+{% endmacro %}

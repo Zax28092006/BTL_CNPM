@@ -1,0 +1,130 @@
+{# Shared Invoice Folio & Print Component — reused by C04, S04, and S05 #}
+{% if invoice %}
+<article class="gl-invoice-folio" aria-label="Hóa đơn thanh toán">
+  <div class="gl-invoice-folio__header">
+    <div>
+      <div class="d-flex align-items-center gap-3">
+        <img src="{{ url_for('static', filename='images/branding/valentia-logo-primary.png') }}"
+             alt="Logo The Valentia Hotel &amp; Suites"
+             width="48"
+             height="52">
+        <div>
+          <div class="gl-invoice-folio__brand">THE VALENTIA HOTEL &amp; SUITES</div>
+          {% if hotel_contact is defined and hotel_contact %}
+          <div class="gl-helper mt-1 mb-0">
+            {% if hotel_contact.address %}{{ hotel_contact.address }}{% endif %}
+            {% if hotel_contact.phone %} · {{ hotel_contact.phone }}{% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="text-sm-end">
+      {% if invoice.code %}
+      <div class="gl-label mb-1">Mã hóa đơn</div>
+      <div class="fw-semibold gl-tabular">{{ invoice.code }}</div>
+      {% endif %}
+      {% if invoice.issued_at %}
+      <div class="gl-helper mt-1 mb-0 gl-tabular">Ngày lập: {{ invoice.issued_at }}</div>
+      {% endif %}
+      {% if invoice.booking_code or invoice.booking_id or invoice.rental_slip_code %}
+      <div class="gl-helper mt-1 mb-0 gl-tabular">
+        {% if invoice.booking_code %}Đặt phòng: {{ invoice.booking_code }}{% elif invoice.booking_id %}Booking #{{ invoice.booking_id }}{% endif %}
+        {% if invoice.rental_slip_code %}{% if invoice.booking_code or invoice.booking_id %} · {% endif %}Phiếu thuê: {{ invoice.rental_slip_code }}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+      <div class="gl-label">Khách hàng</div>
+      <div>{{ invoice.customer_name | default('—') }}</div>
+      {% if invoice.customer_phone %}
+      <div class="gl-helper mt-1 mb-0 gl-tabular">Số điện thoại: {{ invoice.customer_phone }}</div>
+      {% endif %}
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="gl-label">Phòng và kỳ lưu trú</div>
+      <div>
+        {{ invoice.room_name | default('—') }}
+        {% if invoice.room_type %} · {{ invoice.room_type }}{% endif %}
+      </div>
+      <div class="gl-helper mt-1 mb-0 gl-tabular">
+        Nhận: {{ invoice.check_in_display | default('—') }} · Trả: {{ invoice.check_out_display | default('—') }}
+        {% if invoice.nights %} ({{ invoice.nights }} đêm){% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="gl-table-wrap mb-3">
+    <table class="gl-table">
+      <thead>
+        <tr>
+          <th scope="col">Khoản mục</th>
+          <th scope="col" class="table-numeric">Chi tiết</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if invoice.original_nightly_display %}
+        <tr>
+          <td>Giá niêm yết mỗi đêm</td>
+          <td class="table-numeric price-value {{ 'gl-folio__value--strike' if invoice.discount_display else '' }}">{{ invoice.original_nightly_display }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.discount_display %}
+        <tr>
+          <td>{{ invoice.promotion_label | default('Ưu đãi giảm giá') }}</td>
+          <td class="table-numeric price-value gl-folio__value--discount">{{ invoice.discount_display }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.nightly_rate_display %}
+        <tr>
+          <td>Đơn giá áp dụng mỗi đêm</td>
+          <td class="table-numeric price-value {{ 'gl-folio__value--promo' if invoice.discount_display else '' }}">{{ invoice.nightly_rate_display }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.room_subtotal_display %}
+        <tr>
+          <td>Tiền phòng{% if invoice.nights %} ({{ invoice.nights }} đêm){% endif %}</td>
+          <td class="table-numeric price-value">{{ invoice.room_subtotal_display }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.third_guest_surcharge_display %}
+        <tr>
+          <td>Phụ thu khách thứ 3 (25%)</td>
+          <td class="table-numeric price-value">{{ invoice.third_guest_surcharge_display }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.foreign_factor_display %}
+        <tr>
+          <td>Hệ số khách nước ngoài (1,5)</td>
+          <td class="table-numeric gl-tabular">{{ invoice.foreign_factor_display }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.payment_method_label %}
+        <tr>
+          <td>Phương thức thanh toán</td>
+          <td class="table-numeric">{{ invoice.payment_method_label }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.payment_status_label %}
+        <tr>
+          <td>Trạng thái thanh toán</td>
+          <td class="table-numeric">
+            {% set chip_state = invoice.payment_status %}
+            {% set chip_label = invoice.payment_status_label %}
+            {% include 'partials/_status_chip.html' %}
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="gl-folio__row gl-folio__row--total">
+    <span class="gl-folio__label">Tổng tiền thanh toán</span>
+    <span class="gl-folio__total-value price-value">{{ invoice.total_display | default('—') }}</span>
+  </div>
+</article>
+{% endif %}

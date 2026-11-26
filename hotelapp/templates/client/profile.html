@@ -1,0 +1,140 @@
+{% extends 'client/base_client.html' %}
+
+{% set active_client_nav = 'profile' %}
+{% set show_client_bottom_nav = true %}
+{% set profile_action = profile_update_url | default('') %}
+{% set pw_action = change_password_url | default('') %}
+
+{% block title %}Hồ sơ và đổi mật khẩu — The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block content %}
+<div class="gl-container gl-container--client" style="max-width: 680px;">
+  <div class="gl-page-head">
+    <div>
+      <h1 class="mb-1">Hồ sơ và đổi mật khẩu</h1>
+      <p class="gl-helper mb-0">Thông tin tài khoản khách hàng đang đăng nhập.</p>
+    </div>
+  </div>
+
+  {% if not (current_user is defined and current_user.is_authenticated) %}
+  <div class="gl-alert gl-alert--info" role="status">
+    <div class="gl-alert__title">Yêu cầu đăng nhập</div>
+    <p class="mb-2">Vui lòng đăng nhập để xem hồ sơ cá nhân và đổi mật khẩu.</p>
+    <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đăng nhập</a>
+  </div>
+  {% else %}
+    {% if profile_message is defined and profile_message %}
+    <div class="gl-alert gl-alert--success mb-4" role="status" data-gl-flash-toast="{{ profile_message }}">{{ profile_message }}</div>
+    {% endif %}
+    {% if profile_error is defined and profile_error %}
+    <div class="gl-alert gl-alert--danger mb-4" role="alert">{{ profile_error }}</div>
+    {% endif %}
+
+    <section class="gl-panel mb-4" aria-labelledby="profileInfoTitle">
+      <h2 id="profileInfoTitle" class="h3 mb-3">1. Thông tin cá nhân</h2>
+
+      <div id="profileUpdateUnavailable" class="gl-alert gl-alert--info mb-3" role="status" hidden>
+        <div class="gl-alert__title">Chưa thể cập nhật trực tuyến</div>
+        <p class="mb-0">Quý khách vui lòng liên hệ quầy lễ tân khi cần điều chỉnh thông tin cá nhân.</p>
+      </div>
+
+      <form id="clientProfileForm" method="post" action="{{ profile_action }}" novalidate>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="gl-label" for="profileName">Họ và tên <span class="gl-required-mark">*</span></label>
+            <input id="profileName" name="name" type="text" class="form-control gl-input" value="{{ current_user.name | default('') }}" {{ '' if profile_action else 'readonly' }}>
+            <p id="profileNameError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="profileUsername">Tên đăng nhập <span class="gl-helper">(chỉ đọc)</span></label>
+            <input id="profileUsername" type="text" class="form-control gl-input" value="{{ current_user.username if current_user.username else 'Chưa cập nhật' }}" readonly>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="profileCccd">CMND / CCCD / Hộ chiếu <span class="gl-helper">(chỉ đọc)</span></label>
+            <input id="profileCccd" type="text" class="form-control gl-input gl-tabular" value="{{ current_user.cccd if current_user.cccd else 'Chưa cập nhật' }}" readonly>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="profileNationality">Quốc tịch</label>
+            <input id="profileNationality" name="nationality" type="text" class="form-control gl-input" value="{{ current_user.nationality if current_user.nationality else 'Chưa cập nhật' }}" {{ '' if profile_action else 'readonly' }}>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="profilePhone">Số điện thoại <span class="gl-required-mark">*</span></label>
+            <input id="profilePhone" name="phone_number" type="tel" class="form-control gl-input gl-tabular" value="{{ current_user.phone_number if current_user.phone_number else '' }}" placeholder="{{ '' if current_user.phone_number else 'Chưa cập nhật' }}" {{ '' if profile_action else 'readonly' }}>
+            <p id="profilePhoneError" class="gl-field-error" hidden></p>
+          </div>
+
+          {% if current_user.email is defined %}
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="profileEmail">Email</label>
+            <input id="profileEmail" name="email" type="email" class="form-control gl-input" value="{{ current_user.email or 'Chưa cập nhật' }}" {{ '' if profile_action else 'readonly' }}>
+          </div>
+          {% endif %}
+
+          {% if current_user.address is defined %}
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="profileAddress">Địa chỉ</label>
+            <input id="profileAddress" name="address" type="text" class="form-control gl-input" value="{{ current_user.address or 'Chưa cập nhật' }}" {{ '' if profile_action else 'readonly' }}>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary gl-btn">Lưu thay đổi</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="gl-panel" aria-labelledby="changePasswordTitle">
+      <h2 id="changePasswordTitle" class="h3 mb-3">2. Đổi mật khẩu</h2>
+
+      <div id="passwordChangeUnavailable" class="gl-alert gl-alert--info mb-3" role="status" hidden>
+        <div class="gl-alert__title">Chưa thể đổi mật khẩu trực tuyến</div>
+        <p class="mb-0">Quý khách vui lòng liên hệ quầy lễ tân hoặc bộ phận hỗ trợ tài khoản để đặt lại mật khẩu.</p>
+      </div>
+
+      <form id="changePasswordForm" method="post" action="{{ pw_action }}" novalidate>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="gl-label" for="currentPassword">Mật khẩu hiện tại <span class="gl-required-mark">*</span></label>
+            <div class="gl-password-wrap">
+              <input id="currentPassword" name="current_password" type="password" class="form-control gl-input" autocomplete="current-password">
+              <button type="button" class="gl-password-toggle" data-gl-toggle-password="currentPassword" aria-pressed="false">Hiện</button>
+            </div>
+            <p id="currentPasswordError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="newPassword">Mật khẩu mới <span class="gl-required-mark">*</span></label>
+            <div class="gl-password-wrap">
+              <input id="newPassword" name="new_password" type="password" class="form-control gl-input" autocomplete="new-password">
+              <button type="button" class="gl-password-toggle" data-gl-toggle-password="newPassword" aria-pressed="false">Hiện</button>
+            </div>
+            <p id="newPasswordError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="gl-label" for="confirmNewPassword">Xác nhận mật khẩu mới <span class="gl-required-mark">*</span></label>
+            <div class="gl-password-wrap">
+              <input id="confirmNewPassword" name="confirm_password" type="password" class="form-control gl-input" autocomplete="new-password">
+              <button type="button" class="gl-password-toggle" data-gl-toggle-password="confirmNewPassword" aria-pressed="false">Hiện</button>
+            </div>
+            <p id="confirmNewPasswordError" class="gl-field-error" hidden></p>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary gl-btn">Đổi mật khẩu</button>
+        </div>
+      </form>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/client-pages.js') }}"></script>
+{% endblock %}

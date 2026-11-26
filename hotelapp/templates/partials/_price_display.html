@@ -1,0 +1,88 @@
+{# Reusable Price & Promotion Display Component (P02 · Quick-View · P03 · C01 · A01) #}
+{# P01 Homepage NEVER calls this macro #}
+
+{% macro format_vnd(val) -%}
+  {%- if val is defined and val is not none and (val | string | trim) != '' -%}
+    {%- set num = val | float -%}
+    {{ "{:,.0f}".format(num).replace(",", ".") }}đ
+  {%- endif -%}
+{%- endmacro %}
+
+{# Extracts normalized pricing state from provided room pricing data #}
+{% macro extract_pricing_ns(item, out) -%}
+  {%- set is_ref = (item.is_reference | default(false)) if (item is defined and item) else true -%}
+  {%- set promo_obj = item.promotion if (item is defined and item and item.promotion is defined and item.promotion is mapping) else {} -%}
+  {%- set raw_orig = item.original_price if (item.original_price is defined and item.original_price is not none) else (item.list_price if (item.list_price is defined and item.list_price is not none) else (item.base_price if (item.base_price is defined and item.base_price is not none) else (item.price if (item.price is defined and item.price is not none) else none))) -%}
+  {%- set raw_final = item.final_price if (item.final_price is defined and item.final_price is not none) else (item.discounted_price if (item.discounted_price is defined and item.discounted_price is not none) else (promo_obj.final_price if (promo_obj and promo_obj.final_price is defined and promo_obj.final_price is not none) else none)) -%}
+  {%- set raw_pct = item.discount_percent if (item.discount_percent is defined and item.discount_percent is not none) else (promo_obj.discount_percent if (promo_obj and promo_obj.discount_percent is defined and promo_obj.discount_percent is not none) else none) -%}
+  {%- set raw_status = (item.promotion_status | default(promo_obj.status | default(''))) | string | lower | trim -%}
+  {%- set promo_name = (item.promotion_name | default(promo_obj.name | default(''))) | string | trim -%}
+  {%- set promo_cond = (item.promotion_condition | default(promo_obj.condition | default(promo_obj.description | default('')))) | string | trim -%}
+  {%- set savings = item.savings_amount if (item.savings_amount is defined and item.savings_amount is not none) else (promo_obj.savings_amount if (promo_obj and promo_obj.savings_amount is defined and promo_obj.savings_amount is not none) else none) -%}
+
+  {%- set out.is_reference = is_ref -%}
+  {%- set out.has_price = (not is_ref) and (raw_orig is not none) and ((raw_orig | float) > 0) -%}
+  {%- set out.original_price = (raw_orig | float) if out.has_price else none -%}
+  {%- set out.raw_status = raw_status -%}
+  {%- set out.promo_name = promo_name -%}
+  {%- set out.promo_cond = promo_cond -%}
+  {%- set out.savings_amount = (savings | float) if (savings is not none and (savings | float) > 0) else none -%}
+
+  {%- set has_valid_final = out.has_price and (raw_final is not none) and ((raw_final | float) > 0) and ((raw_final | float) < out.original_price) -%}
+  {%- set has_valid_pct = (raw_pct is not none) and ((raw_pct | float) > 0) and ((raw_pct | float) <= 100) -%}
+  {%- set status_allows = (raw_status == 'active') or (raw_status == '' and has_valid_final and has_valid_pct) -%}
+
+  {%- if out.has_price and status_allows and has_valid_final and has_valid_pct -%}
+    {%- set out.has_active_promo = true -%}
+    {%- set out.final_price = (raw_final | float) -%}
+    {%- set out.discount_percent = (raw_pct | float) -%}
+  {%- else -%}
+    {%- set out.has_active_promo = false -%}
+    {%- set out.final_price = out.original_price -%}
+    {%- set out.discount_percent = 0 -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_price_block(item, variant='card', show_savings=true, show_promo_label=true, show_condition=false, show_status_note=false, missing_text='Liên hệ lễ tân để biết đơn giá theo ngày.') %}
+  {%- set p = namespace() -%}
+  {{- extract_pricing_ns(item, p) -}}
+  <div class="gl-price-block gl-price-block--{{ variant }}">
+    {%- if p.has_price -%}
+      {%- if p.has_active_promo -%}
+        {%- if show_promo_label -%}
+        <span class="gl-promo-label">{{ p.promo_name if p.promo_name else 'Ưu đãi đặc biệt' }}</span>
+        {%- endif -%}
+        <div class="gl-price-row">
+          <div class="gl-price-main-group">
+            <strong class="gl-price-current gl-price-current--promo price-value">{{ format_vnd(p.final_price) }}</strong>
+            <span class="gl-price-unit">/ đêm</span>
+          </div>
+          <div class="gl-price-compare-group">
+            <del class="gl-price-original price-value" aria-label="Giá gốc">{{ format_vnd(p.original_price) }}</del>
+            <span class="gl-promo-badge gl-tabular">-{{ "%.0f"|format(p.discount_percent) }}%</span>
+          </div>
+        </div>
+        {%- if show_savings and p.savings_amount -%}
+        <p class="gl-price-savings gl-tabular mb-0">Tiết kiệm {{ format_vnd(p.savings_amount) }}</p>
+        {%- endif -%}
+        {%- if show_condition and p.promo_cond -%}
+        <p class="gl-promo-condition mb-0">{{ p.promo_cond }}</p>
+        {%- endif -%}
+      {%- else -%}
+        <div class="gl-price-row">
+          <div class="gl-price-main-group">
+            <strong class="gl-price-current price-value">{{ format_vnd(p.original_price) }}</strong>
+            <span class="gl-price-unit">/ đêm</span>
+          </div>
+        </div>
+        {%- if show_status_note and p.raw_status in ['expired', 'ended'] -%}
+        <p class="gl-price-meta mb-0">Ưu đãi trước đó đã hết hạn — áp dụng giá niêm yết.</p>
+        {%- elif show_status_note and p.raw_status in ['upcoming', 'not_started', 'scheduled'] -%}
+        <p class="gl-price-meta mb-0">Ưu đãi chưa đến thời gian áp dụng.</p>
+        {%- endif -%}
+      {%- endif -%}
+    {%- else -%}
+      <p class="gl-price-missing mb-0">{{ missing_text }}</p>
+    {%- endif -%}
+  </div>
+{% endmacro %}

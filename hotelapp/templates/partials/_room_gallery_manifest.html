@@ -1,0 +1,243 @@
+{# Gallery & Tier Manifest cho 9 phòng (58 ảnh phân giải cao trên 301..303, 201..203, 101..103) #}
+{# Thứ tự hạng phòng: Hạng A = Suite gia đình (301, 302, 303) -> Hạng B = Phòng cao cấp (201, 202, 203) -> Hạng C = Phòng tiêu chuẩn (101, 102, 103) #}
+
+{% set room_assets_by_number = {
+  '301': {
+    'room_number': '301',
+    'tier_key': 'hang_a',
+    'tier_code': 'A',
+    'tier_label': 'HẠNG A',
+    'type_name': 'Suite gia đình',
+    'segment_label': 'Cao cấp nhất',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/301/740650559.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/301/740650559.jpg'), 'alt': 'Phòng 301 (Suite gia đình) — không gian phòng ngủ lớn ánh đèn chùm', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/301/752429660.jpg'), 'alt': 'Phòng 301 (Suite gia đình) — góc nhìn giường đôi và cửa kính sáng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/301/752429671.jpg'), 'alt': 'Phòng 301 (Suite gia đình) — bố trí nội thất sang trọng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/301/752430890.jpg'), 'alt': 'Phòng 301 (Suite gia đình) — khu vực thư giãn và tiếp khách', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/301/752431511.jpg'), 'alt': 'Phòng 301 (Suite gia đình) — không gian nghỉ ngơi thoáng đãng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/301/752431718.jpg'), 'alt': 'Phòng 301 (Suite gia đình) — khu vực phòng tắm riêng hiện đại', 'is_low_res': false}
+    ]
+  },
+  '302': {
+    'room_number': '302',
+    'tier_key': 'hang_a',
+    'tier_code': 'A',
+    'tier_label': 'HẠNG A',
+    'type_name': 'Suite gia đình',
+    'segment_label': 'Cao cấp nhất',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/302/908894088.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/302/908894088.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — phòng ngủ chính giường đôi cỡ lớn', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/302/908894097.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — góc nhìn tổng thể không gian suite', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/302/908894513.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — khu vực tiếp khách tiện nghi', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/302/908895021.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — góc bàn làm việc cạnh cửa sổ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/302/908898402.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — không gian nghỉ dưỡng rộng rãi', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/302/908898411.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — chi tiết nội thất gỗ và ánh sáng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/302/908898417.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — khu vực thư giãn gia đình', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/302/909696404.jpg'), 'alt': 'Phòng 302 (Suite gia đình) — phòng tắm riêng cao cấp', 'is_low_res': false}
+    ]
+  },
+  '303': {
+    'room_number': '303',
+    'tier_key': 'hang_a',
+    'tier_code': 'A',
+    'tier_label': 'HẠNG A',
+    'type_name': 'Suite gia đình',
+    'segment_label': 'Cao cấp nhất',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/303/863053773.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/303/863053773.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — phòng ngủ chính thiết kế ấm áp', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/303/863053725.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — không gian phòng ngủ mở rộng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/303/863053798.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — khu vực giường lớn và đèn ngủ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/303/863053799.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — góc sinh hoạt chung thoáng sáng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/303/863060107.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — phòng khách tiếp đón riêng tư', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/303/863060057.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — khu vực pantry và bàn ăn nhỏ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/303/863053804.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — phòng tắm đá với bồn rửa mặt', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/303/863053806.jpg'), 'alt': 'Phòng 303 (Suite gia đình) — buồng tắm đứng tách biệt', 'is_low_res': false}
+    ]
+  },
+  '201': {
+    'room_number': '201',
+    'tier_key': 'hang_b',
+    'tier_code': 'B',
+    'tier_label': 'HẠNG B',
+    'type_name': 'Phòng cao cấp',
+    'segment_label': 'Trung gian',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/201/925587730 (1).jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/201/925587730 (1).jpg'), 'alt': 'Phòng 201 (Phòng cao cấp) — giường đôi cỡ lớn bên cửa sổ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/201/925587710.jpg'), 'alt': 'Phòng 201 (Phòng cao cấp) — không gian phòng nghỉ tràn ngập ánh sáng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/201/925586002.jpg'), 'alt': 'Phòng 201 (Phòng cao cấp) — góc nhìn giường ngủ và bàn làm việc', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/201/925585991.jpg'), 'alt': 'Phòng 201 (Phòng cao cấp) — chi tiết đầu giường và đèn đọc sách', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/201/925585986.jpg'), 'alt': 'Phòng 201 (Phòng cao cấp) — phòng tắm riêng sạch sẽ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/201/925585989.jpg'), 'alt': 'Phòng 201 (Phòng cao cấp) — khu vực vòi sen và gương phòng tắm', 'is_low_res': false}
+    ]
+  },
+  '202': {
+    'room_number': '202',
+    'tier_key': 'hang_b',
+    'tier_code': 'B',
+    'tier_label': 'HẠNG B',
+    'type_name': 'Phòng cao cấp',
+    'segment_label': 'Trung gian',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/202/886050698.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/202/886050698.jpg'), 'alt': 'Phòng 202 (Phòng cao cấp) — giường đôi với vách gỗ trang trí tinh tế', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/202/886052284.jpg'), 'alt': 'Phòng 202 (Phòng cao cấp) — góc nhìn chính diện không gian nghỉ ngơi', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/202/886050320.jpg'), 'alt': 'Phòng 202 (Phòng cao cấp) — phòng ngủ liền khu vực bồn tắm vách kính', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/202/886053702.jpg'), 'alt': 'Phòng 202 (Phòng cao cấp) — góc ghế thư giãn cạnh cửa sổ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/202/886053710.jpg'), 'alt': 'Phòng 202 (Phòng cao cấp) — bố cục bàn làm việc và ánh sáng dịu', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/202/886053712.jpg'), 'alt': 'Phòng 202 (Phòng cao cấp) — góc ngồi ngắm cảnh yên tĩnh', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/202/886056107.jpg'), 'alt': 'Phòng 202 (Phòng cao cấp) — khu vực bồn tắm mở thoáng rộng', 'is_low_res': false}
+    ]
+  },
+  '203': {
+    'room_number': '203',
+    'tier_key': 'hang_b',
+    'tier_code': 'B',
+    'tier_label': 'HẠNG B',
+    'type_name': 'Phòng cao cấp',
+    'segment_label': 'Trung gian',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/203/576283105.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/203/576283105.jpg'), 'alt': 'Phòng 203 (Phòng cao cấp) — giường đôi ấm cúng với ánh sáng dịu', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/203/576283099.jpg'), 'alt': 'Phòng 203 (Phòng cao cấp) — góc nhìn tổng thể cạnh cửa sổ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/203/576283102.jpg'), 'alt': 'Phòng 203 (Phòng cao cấp) — khu vực nghỉ ngơi và bàn trang điểm', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/203/576283106.jpg'), 'alt': 'Phòng 203 (Phòng cao cấp) — nội thất gỗ hiện đại và TV màn hình phẳng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/203/576283108.jpg'), 'alt': 'Phòng 203 (Phòng cao cấp) — góc tiếp khách và cửa kính rộng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/203/576283903.jpg'), 'alt': 'Phòng 203 (Phòng cao cấp) — phòng tắm riêng vách kính đứng', 'is_low_res': false}
+    ]
+  },
+  '101': {
+    'room_number': '101',
+    'tier_key': 'hang_c',
+    'tier_code': 'C',
+    'tier_label': 'HẠNG C',
+    'type_name': 'Phòng tiêu chuẩn',
+    'segment_label': 'Phổ thông nhất',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/101/690369051.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/101/690369051.jpg'), 'alt': 'Phòng 101 (Phòng tiêu chuẩn) — giường đôi gọn sáng cạnh rèm cửa sổ', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/101/885943627.jpg'), 'alt': 'Phòng 101 (Phòng tiêu chuẩn) — không gian phòng ngủ hướng phố thoáng đãng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/101/690368802.jpg'), 'alt': 'Phòng 101 (Phòng tiêu chuẩn) — bố trí nội thất tiện nghi', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/101/690368851.jpg'), 'alt': 'Phòng 101 (Phòng tiêu chuẩn) — khu vực bàn làm việc và tivi', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/101/690368933.jpg'), 'alt': 'Phòng 101 (Phòng tiêu chuẩn) — lối vào và khu tủ đồ gọn gàng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/101/690369077.jpg'), 'alt': 'Phòng 101 (Phòng tiêu chuẩn) — phòng tắm riêng sạch sẽ', 'is_low_res': false}
+    ]
+  },
+  '102': {
+    'room_number': '102',
+    'tier_key': 'hang_c',
+    'tier_code': 'C',
+    'tier_label': 'HẠNG C',
+    'type_name': 'Phòng tiêu chuẩn',
+    'segment_label': 'Phổ thông nhất',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/102/480704682.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/102/480704682.jpg'), 'alt': 'Phòng 102 (Phòng tiêu chuẩn) — giường ngủ tông gỗ sáng ấm áp', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/102/480710687.jpg'), 'alt': 'Phòng 102 (Phòng tiêu chuẩn) — góc nhìn trực diện giường và ban công', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/102/825760839.jpg'), 'alt': 'Phòng 102 (Phòng tiêu chuẩn) — không gian sinh hoạt thông thoáng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/102/904198573.jpg'), 'alt': 'Phòng 102 (Phòng tiêu chuẩn) — bàn gỗ và khu vực nghỉ ngơi', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/102/904198872.jpg'), 'alt': 'Phòng 102 (Phòng tiêu chuẩn) — góc nhìn toàn phòng sáng sủa', 'is_low_res': false}
+    ]
+  },
+  '103': {
+    'room_number': '103',
+    'tier_key': 'hang_c',
+    'tier_code': 'C',
+    'tier_label': 'HẠNG C',
+    'type_name': 'Phòng tiêu chuẩn',
+    'segment_label': 'Phổ thông nhất',
+    'is_low_res': false,
+    'cover': url_for('static', filename='images/rooms/103/651610854.jpg'),
+    'images': [
+      {'url': url_for('static', filename='images/rooms/103/651610854.jpg'), 'alt': 'Phòng 103 (Phòng tiêu chuẩn) — giường ngủ cạnh cửa sổ đón nắng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/103/651602897.jpg'), 'alt': 'Phòng 103 (Phòng tiêu chuẩn) — góc nhìn không gian nghỉ ngơi tinh gọn', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/103/651602913.jpg'), 'alt': 'Phòng 103 (Phòng tiêu chuẩn) — nội thất gỗ hiện đại và ấm cúng', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/103/651610857.jpg'), 'alt': 'Phòng 103 (Phòng tiêu chuẩn) — khu vực bàn làm việc và ghế thư giãn', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/103/651617343.jpg'), 'alt': 'Phòng 103 (Phòng tiêu chuẩn) — phòng tắm riêng tiện nghi', 'is_low_res': false},
+      {'url': url_for('static', filename='images/rooms/103/651607978.jpg'), 'alt': 'Phòng 103 (Phòng tiêu chuẩn) — quầy minibar và tiện ích trà cà phê', 'is_low_res': false}
+    ]
+  }
+} %}
+
+{% set room_tier_catalog = [
+  {
+    'tier_key': 'hang_a',
+    'tier_code': 'A',
+    'tier_label': 'HẠNG A',
+    'segment_label': 'Cao cấp nhất',
+    'name': 'Suite gia đình',
+    'description': 'Phân khúc cao cấp nhất gồm 3 phòng riêng biệt (301, 302, 303), sở hữu không gian rộng rãi và tầm nhìn thoáng đạt.',
+    'room_numbers': ['301', '302', '303'],
+    'cover': room_assets_by_number['301'].cover,
+    'images': room_assets_by_number['301'].images
+  },
+  {
+    'tier_key': 'hang_b',
+    'tier_code': 'B',
+    'tier_label': 'HẠNG B',
+    'segment_label': 'Trung gian',
+    'name': 'Phòng cao cấp',
+    'description': 'Phân khúc trung gian gồm 3 phòng riêng biệt (201, 202, 203), hài hòa giữa tiện nghi hiện đại và sự thư thái.',
+    'room_numbers': ['201', '202', '203'],
+    'cover': room_assets_by_number['201'].cover,
+    'images': room_assets_by_number['201'].images
+  },
+  {
+    'tier_key': 'hang_c',
+    'tier_code': 'C',
+    'tier_label': 'HẠNG C',
+    'segment_label': 'Phổ thông nhất',
+    'name': 'Phòng tiêu chuẩn',
+    'description': 'Phân khúc phổ thông nhất gồm 3 phòng riêng biệt (101, 102, 103), thiết kế tinh gọn và đầy đủ tiện nghi thiết yếu.',
+    'room_numbers': ['101', '102', '103'],
+    'cover': room_assets_by_number['101'].cover,
+    'images': room_assets_by_number['101'].images
+  }
+] %}
+
+{% set room_gallery_manifest = {
+  'hang_a': room_tier_catalog[0],
+  'hang_b': room_tier_catalog[1],
+  'hang_c': room_tier_catalog[2]
+} %}
+
+{% macro resolve_room_number(room) -%}
+  {%- set explicit = (room.room_number | default('')) | string | trim -%}
+  {%- if explicit in ['301', '302', '303', '201', '202', '203', '101', '102', '103'] -%}{{ explicit }}
+  {%- else -%}
+    {%- set nm = (room.name | default('')) | string -%}
+    {%- set found = namespace(num='') -%}
+    {%- for code in ['301', '302', '303', '201', '202', '203', '101', '102', '103'] -%}
+      {%- if code in nm and not found.num -%}
+        {%- set found.num = code -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {{ found.num }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro resolve_room_tier_key(room) -%}
+  {%- set rnum = resolve_room_number(room) | trim -%}
+  {%- if rnum in ['301', '302', '303'] -%}hang_a
+  {%- elif rnum in ['201', '202', '203'] -%}hang_b
+  {%- elif rnum in ['101', '102', '103'] -%}hang_c
+  {%- else -%}
+    {%- set t = (room.tier_key | default(room.tier_code | default(room.tier_label | default(room.type_name | default(room.name | default('')))))) | string | lower | trim -%}
+    {%- if 'hang_a' in t or 'hạng a' in t or 'loại a' in t or 'suite gia đình' in t or 'family suite' in t or t == 'a' -%}hang_a
+    {%- elif 'hang_b' in t or 'hạng b' in t or 'loại b' in t or 'cao cấp' in t or t == 'b' -%}hang_b
+    {%- elif 'hang_c' in t or 'hạng c' in t or 'loại c' in t or 'tiêu chuẩn' in t or 'standard' in t or t == 'c' -%}hang_c
+    {%- else -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endmacro %}

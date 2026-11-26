@@ -1,0 +1,105 @@
+{% extends 'public/base_public.html' %}
+
+{% set active_nav = '' %}
+{% set home_url = url_for('index') %}
+{% set home_nav_href = home_url %}
+{% set rooms_nav_href = room_search_url if (room_search_url is defined and room_search_url) else (home_url ~ '#homeRooms') %}
+{% set policy_nav_href = policy_page_url if (policy_page_url is defined and policy_page_url) else (home_url ~ '#homeAbout') %}
+{% set contact_nav_href = contact_page_url if (contact_page_url is defined and contact_page_url) else '#footerInfo' %}
+{% set policy_link = policy_page_url | default('') %}
+{% set show_primary_cta = false %}
+{% set footer_show_stay_info = false %}
+
+{% set raw_next = (next_url if (next_url is defined and next_url) else (request.args.get('next', '') if request is defined else '')) %}
+{% set safe_next = raw_next if (raw_next and raw_next.startswith('/') and not raw_next.startswith('//')) else '' %}
+{% set login_reason = (request.args.get('reason', '') if request is defined else '') %}
+{% set server_msg = msg if (msg is defined and msg) else (mgs if (mgs is defined and mgs) else '') %}
+
+{% block title %}Đăng nhập | The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block content %}
+<section class="gl-auth-section" aria-labelledby="loginPageTitle">
+  <div class="gl-container gl-container--public">
+    <div class="gl-auth-shell">
+      <div class="gl-auth-aside">
+        <h1 id="loginPageTitle" class="mb-3">Đăng nhập hệ thống</h1>
+        <p class="gl-home-copy mb-0">
+          Sử dụng tài khoản của bạn tại The Valentia Hotel &amp; Suites để theo dõi thông tin đặt phòng, phiếu thuê và hóa đơn lưu trú.
+        </p>
+      </div>
+
+      <div class="gl-auth-card">
+        <h2 class="mb-2 d-lg-none">Đăng nhập</h2>
+        <p class="gl-helper mb-3">Trường có dấu <span class="gl-required-mark">*</span> là bắt buộc.</p>
+
+        {% if login_reason == 'booking' or ('/booking' in safe_next) %}
+        <div id="loginBookingPrompt" class="gl-alert gl-alert--info mb-3" role="status">
+          <div class="gl-alert__title">Tiếp tục đặt phòng</div>
+          <p class="mb-0">Vui lòng đăng nhập để tiếp tục đặt phòng.</p>
+        </div>
+        {% endif %}
+
+        {% if server_msg %}
+        <div class="gl-alert gl-alert--danger mb-3" role="alert">
+          <div class="gl-alert__title">Đăng nhập không thành công</div>
+          <p class="mb-0">Tên đăng nhập hoặc mật khẩu chưa chính xác. Vui lòng kiểm tra lại.</p>
+        </div>
+        {% endif %}
+
+        <div id="loginErrorSummary" class="gl-alert gl-alert--danger mb-3" role="alert" tabindex="-1" hidden>
+          <div id="loginErrorSummaryTitle" class="gl-alert__title">Có mục cần kiểm tra</div>
+          <ul id="loginErrorSummaryList" class="gl-error-summary__list"></ul>
+        </div>
+
+        <form id="loginForm" method="post" action="{{ url_for('login_guest', next=safe_next) if safe_next else url_for('login_guest') }}" novalidate>
+          {% if safe_next %}
+          <input type="hidden" id="loginNextInput" name="next" value="{{ safe_next }}">
+          {% endif %}
+          <div class="mb-3">
+            <label class="gl-label" for="loginUsername">Tên đăng nhập <span class="gl-required-mark">*</span></label>
+            <input id="loginUsername"
+                   name="username"
+                   type="text"
+                   class="form-control gl-input"
+                   value="{{ form_data.username if (form_data is defined and form_data) else (request.form.get('username', '') if request is defined else '') }}"
+                   autocomplete="username"
+                   aria-describedby="loginUsernameError"
+                   required>
+            <p id="loginUsernameError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div class="mb-3">
+            <label class="gl-label" for="loginPassword">Mật khẩu <span class="gl-required-mark">*</span></label>
+            <div class="gl-password-wrap">
+              <input id="loginPassword"
+                     name="password"
+                     type="password"
+                     class="form-control gl-input"
+                     autocomplete="current-password"
+                     aria-describedby="loginPasswordError"
+                     required>
+              <button type="button"
+                      class="gl-password-toggle"
+                      data-gl-toggle-password="loginPassword"
+                      aria-pressed="false">Hiện</button>
+            </div>
+            <p id="loginPasswordError" class="gl-field-error" hidden></p>
+          </div>
+
+          <div class="d-grid gap-2 mt-4">
+            <button id="loginSubmitBtn" type="submit" class="btn btn-primary gl-btn">Đăng nhập</button>
+          </div>
+        </form>
+
+        <div class="mt-4 pt-3 border-top gl-helper">
+          Khách hàng chưa có tài khoản? <a href="{{ url_for('register_view') }}">Đăng ký tài khoản khách hàng</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+{% endblock %}

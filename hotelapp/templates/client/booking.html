@@ -1,0 +1,508 @@
+{% extends 'client/base_client.html' %}
+{% from 'partials/_room_gallery_manifest.html' import room_gallery_manifest, room_assets_by_number, resolve_room_number, resolve_room_tier_key %}
+{% from 'partials/_price_display.html' import render_price_block, extract_pricing_ns, format_vnd %}
+
+{% set active_client_nav = 'booking' %}
+{% set show_client_bottom_nav = false %}
+{% set max_guest_limit = max_guests if (max_guests is defined and max_guests) else 3 %}
+{% set submit_action = booking_submit_url | default('') %}
+{% set choose_room_url = room_search_url if (room_search_url is defined and room_search_url) else (url_for('index') ~ '#homeRooms') %}
+{% set is_logged_in = (current_user is defined and current_user.is_authenticated) %}
+{% set pre_name = current_user.name if (is_logged_in and current_user.name) else '' %}
+{% set pre_phone = current_user.phone_number if (is_logged_in and current_user.phone_number) else '' %}
+{% set q_room_id = request.args.get('room_id', '') if request is defined else '' %}
+{% set q_checkin = checkin if (checkin is defined and checkin) else (request.args.get('checkin', '') if request is defined else '') %}
+{% set q_checkout = checkout if (checkout is defined and checkout) else (request.args.get('checkout', '') if request is defined else '') %}
+{% set q_guests = guests if (guests is defined and guests) else (request.args.get('guests', '1') if request is defined else '1') %}
+{% set has_selected_room = (selected_room is defined and selected_room) %}
+{% set has_room_choices = (available_rooms is defined and available_rooms and not has_selected_room) %}
+{% set current_booking_next = request.full_path.rstrip('?') if (request is defined and request.full_path) else '/booking' %}
+
+{% block title %}Đặt phòng — The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="gl-container gl-container--client">
+  {% if not is_logged_in %}
+  <nav aria-label="Đường dẫn trang" class="mb-3">
+    <ol class="gl-breadcrumb mb-0">
+      <li><a href="{{ url_for('index') }}">Trang chủ</a></li>
+      <li aria-hidden="true">/</li>
+      <li class="gl-breadcrumb__current" aria-current="page">Đặt phòng</li>
+    </ol>
+  </nav>
+
+  <h1 class="mb-3">Đặt phòng</h1>
+  <div id="bookingAuthRequiredBox" class="gl-panel gl-panel--featured" role="status">
+    <h2 class="h4 mb-2">Vui lòng đăng nhập để tiếp tục đặt phòng.</h2>
+    <p class="gl-helper mb-3">
+      Thông tin phòng và thời gian bạn đã chọn sẽ được giữ nguyên sau khi đăng nhập thành công.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary gl-btn" href="{{ url_for('login_view', next=current_booking_next, reason='booking') }}">Đăng nhập để tiếp tục</a>
+      <a class="gl-btn gl-btn-secondary" href="{{ choose_room_url }}">Quay lại xem phòng</a>
+    </div>
+  </div>
+  {% elif not has_selected_room and not has_room_choices and not (booking_success is defined and booking_success) %}
+  <nav aria-label="Đường dẫn trang" class="mb-3">
+    <ol class="gl-breadcrumb mb-0">
+      <li><a href="{{ url_for('index') }}">Trang chủ</a></li>
+      <li aria-hidden="true">/</li>
+      <li class="gl-breadcrumb__current" aria-current="page">Đặt phòng</li>
+    </ol>
+  </nav>
+
+  <h1 class="mb-3">Đặt phòng</h1>
+  <div id="bookingRequireRoomBox" class="gl-panel gl-panel--featured" role="status">
+    <h2 class="h4 mb-2">Vui lòng chọn phòng trước khi tiếp tục đặt phòng.</h2>
+    <p class="gl-helper mb-3">
+      Hãy xem danh sách các hạng phòng, kiểm tra tình trạng còn phòng theo ngày và chọn hạng phòng phù hợp trước khi điền thông tin lưu trú.
+    </p>
+    <a class="btn btn-primary gl-btn" href="{{ choose_room_url }}">Xem và chọn phòng</a>
+  </div>
+  {% else %}
+  <nav aria-label="Tiến trình đặt phòng">
+    <ol class="gl-stepper">
+      <li id="stepperItem1" class="gl-stepper__item is-active" aria-current="step">
+        <span class="gl-stepper__num gl-tabular">1</span>
+        <span>Thông tin phòng và ngày</span>
+      </li>
+      <li id="stepperItem2" class="gl-stepper__item">
+        <span class="gl-stepper__num gl-tabular">2</span>
+        <span>Người đặt và khách lưu trú</span>
+      </li>
+      <li id="stepperItem3" class="gl-stepper__item">
+        <span class="gl-stepper__num gl-tabular">3</span>
+        <span>Xác nhận đặt phòng</span>
+      </li>
+    </ol>
+    <div id="mobileStepperText" class="gl-stepper-mobile">Bước 1/3</div>
+  </nav>
+
+  <h1 class="mb-2">Đặt phòng</h1>
+  <p class="gl-helper mb-4">Mỗi lượt đặt tương ứng một phòng. Trường có dấu <span class="gl-required-mark">*</span> là bắt buộc.</p>
+
+  {% if booking_success is defined and booking_success %}
+  <div class="gl-alert gl-alert--success mb-4" role="status">
+    <div class="gl-alert__title">Yêu cầu đặt phòng đã được ghi nhận</div>
+    <p class="mb-2">
+      {% if booking_code is defined and booking_code %}Mã phiếu đặt: <strong class="gl-tabular">{{ booking_code }}</strong>. {% endif %}
+      {{ booking_success }}
+    </p>
+    {% if my_bookings_url is defined and my_bookings_url %}
+    <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ my_bookings_url }}">Xem đặt phòng của tôi</a>
+    {% endif %}
+  </div>
+  {% elif booking_error is defined and booking_error %}
+  <div class="gl-alert gl-alert--danger mb-4" role="alert">
+    <div class="gl-alert__title">Không thể gửi yêu cầu đặt phòng</div>
+    <p class="mb-0">{{ booking_error }}</p>
+  </div>
+  {% endif %}
+
+  <div class="row g-4 align-items-start">
+    <div class="col-12 col-lg-8">
+      <div id="bookingErrorSummary" class="gl-alert gl-alert--danger mb-4" role="alert" tabindex="-1" hidden>
+        <div id="bookingErrorSummaryTitle" class="gl-alert__title">Có mục cần kiểm tra</div>
+        <ul id="bookingErrorSummaryList" class="gl-error-summary__list"></ul>
+      </div>
+
+      <form id="bookingWizardForm"
+            method="post"
+            action="{{ submit_action }}"
+            data-gl-submit-url="{{ submit_action }}"
+            data-gl-quote-url="{{ booking_quote_url | default('') }}"
+            data-gl-initial-quote-key="{{ (selected_room.id ~ '|' ~ q_checkin ~ '|' ~ q_checkout ~ '|' ~ q_guests) if (has_selected_room and quote_data is defined and quote_data) else '' }}"
+            data-gl-max-guests="{{ max_guest_limit }}"
+            data-gl-booking-date="{{ booking_date | default('') }}"
+            data-gl-max-checkin-date="{{ max_check_in_date | default('') }}"
+            data-gl-initial-step="{{ initial_step | default(1) }}"
+            novalidate>
+        <input id="guestsJsonInput" type="hidden" name="guests_json" value="">
+
+        {# STEP 1 #}
+        <section id="bookingStep1" aria-labelledby="step1Title">
+          <h2 id="step1Title" class="mb-3">Bước 1: Hạng phòng và thời gian lưu trú</h2>
+
+          <div class="row g-3">
+            {% if has_selected_room %}
+            {% set sel_rnum = resolve_room_number(selected_room) | trim %}
+            {% set sel_asset = room_assets_by_number.get(sel_rnum) if sel_rnum else none %}
+            {% set sel_tier_key = resolve_room_tier_key(selected_room) | trim %}
+            {% set sel_manifest = room_gallery_manifest.get(sel_tier_key) if sel_tier_key else none %}
+            {% set sel_thumb = selected_room.image_url if (selected_room.image_url is defined and selected_room.image_url) else (sel_asset.cover if sel_asset else (sel_manifest.cover if sel_manifest else '')) %}
+            {% set sel_pricing_payload = {
+              'is_reference': selected_room.is_reference | default(false),
+              'price': selected_room.price if (selected_room.price is defined and selected_room.price is not none) else none,
+              'original_price': selected_room.original_price if (selected_room.original_price is defined and selected_room.original_price is not none) else none,
+              'list_price': selected_room.list_price if (selected_room.list_price is defined and selected_room.list_price is not none) else none,
+              'final_price': selected_room.final_price if (selected_room.final_price is defined and selected_room.final_price is not none) else none,
+              'discounted_price': selected_room.discounted_price if (selected_room.discounted_price is defined and selected_room.discounted_price is not none) else none,
+              'discount_percent': selected_room.discount_percent if (selected_room.discount_percent is defined and selected_room.discount_percent is not none) else none,
+              'promotion_status': selected_room.promotion_status | default(''),
+              'promotion_name': selected_room.promotion_name | default(''),
+              'promotion_condition': selected_room.promotion_condition | default(''),
+              'savings_amount': selected_room.savings_amount if (selected_room.savings_amount is defined and selected_room.savings_amount is not none) else none,
+              'promotion': selected_room.promotion if (selected_room.promotion is defined and selected_room.promotion is mapping) else none
+            } %}
+            <div class="col-12">
+              <input id="c01SelectedRoomId"
+                     type="hidden"
+                     name="room_id"
+                     value="{{ selected_room.id | default('') }}"
+                     data-gl-room-name="{{ selected_room.name }}"
+                     data-gl-room-tier="{{ selected_room.type_name | default(selected_room.tier_label | default('')) }}"
+                     data-gl-rate-display="{{ selected_room.price_display | default('') }}"
+                     data-gl-pricing='{{ sel_pricing_payload | tojson }}'>
+              {% if sel_tier_key or selected_room.tier_key %}
+              <input type="hidden" name="tier" value="{{ selected_room.tier_key | default(sel_tier_key) }}">
+              {% endif %}
+              <div class="gl-selected-room-card">
+                {% if sel_thumb %}
+                <img class="gl-selected-room-card__thumb"
+                     src="{{ sel_thumb }}"
+                     alt="{{ selected_room.image_alt | default(selected_room.name) }}">
+                {% endif %}
+                <div class="gl-selected-room-card__info">
+                  {% if selected_room.tier_label or selected_room.type_name %}
+                  <span class="gl-home-room-card__tier">
+                    {{ selected_room.tier_label }}{% if selected_room.type_name %} · {{ selected_room.type_name }}{% endif %}
+                  </span>
+                  {% endif %}
+                  <h3 class="h5 mb-1">{{ selected_room.name }}</h3>
+                  {{ render_price_block(selected_room, variant='compact', show_savings=true, show_promo_label=true, missing_text='Chưa có thông tin đơn giá từ hệ thống.') }}
+                  {% if selected_room.is_reference %}
+                  <p class="gl-helper mb-0 mt-1">Nhân viên lễ tân sẽ xác nhận thông tin phòng cụ thể khi quý khách nhận phòng.</p>
+                  {% endif %}
+                </div>
+                <div>
+                  <a id="c01ChangeRoomLink"
+                     class="gl-btn gl-btn--sm gl-btn-secondary"
+                     data-gl-base-href="{{ choose_room_url }}"
+                     href="{{ choose_room_url }}">Đổi phòng</a>
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+              <label class="gl-label" for="c01RoomSelect">Hạng phòng (1 phòng mỗi phiếu) <span class="gl-required-mark">*</span></label>
+              <select id="c01RoomSelect" name="room_id" class="form-select gl-select" aria-describedby="c01RoomHelp c01RoomError" required>
+                <option value="">Chọn hạng phòng phù hợp</option>
+                {% for r in available_rooms %}
+                {% set opt_pricing = {
+                  'is_reference': r.is_reference | default(false),
+                  'price': r.price if (r.price is defined and r.price is not none) else none,
+                  'original_price': r.original_price if (r.original_price is defined and r.original_price is not none) else none,
+                  'list_price': r.list_price if (r.list_price is defined and r.list_price is not none) else none,
+                  'final_price': r.final_price if (r.final_price is defined and r.final_price is not none) else none,
+                  'discounted_price': r.discounted_price if (r.discounted_price is defined and r.discounted_price is not none) else none,
+                  'discount_percent': r.discount_percent if (r.discount_percent is defined and r.discount_percent is not none) else none,
+                  'promotion_status': r.promotion_status | default(''),
+                  'promotion_name': r.promotion_name | default(''),
+                  'savings_amount': r.savings_amount if (r.savings_amount is defined and r.savings_amount is not none) else none,
+                  'promotion': r.promotion if (r.promotion is defined and r.promotion is mapping) else none
+                } %}
+                {% set r_p = namespace() %}
+                {{ extract_pricing_ns(r, r_p) }}
+                <option value="{{ r.id }}"
+                        data-gl-rate-display="{{ r.price_display | default('') }}"
+                        data-gl-pricing='{{ opt_pricing | tojson }}'
+                        {{ 'selected' if (selected_room_id is defined and (selected_room_id | string) == (r.id | string)) else '' }}>
+                  {{ r.name }}{% if r.type_name %} · {{ r.type_name }}{% endif %}{% if r_p.has_price %} — {{ format_vnd(r_p.final_price) }}/đêm{% if r_p.has_active_promo %} (-{{ "%.0f"|format(r_p.discount_percent) }}%){% endif %}{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+              <p id="c01RoomHelp" class="gl-helper">Mỗi lượt đặt áp dụng cho một phòng.</p>
+              <p id="c01RoomError" class="gl-field-error" hidden></p>
+            </div>
+            {% endif %}
+
+            <div class="col-12 col-md-4">
+              <label class="gl-label" for="c01CheckInVisible">Ngày nhận phòng <span class="gl-required-mark">*</span></label>
+              <div class="gl-date-field">
+                <input id="c01CheckIn" name="check_in" type="text" class="form-control gl-input gl-tabular" value="{{ q_checkin }}" placeholder="dd/mm/yyyy" autocomplete="off">
+                <span class="gl-date-field__icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </span>
+              </div>
+              <p class="gl-helper">Tối đa 28 ngày kể từ hôm nay.</p>
+              <p id="c01CheckInError" class="gl-field-error" hidden></p>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="gl-label" for="c01CheckOutVisible">Ngày trả phòng <span class="gl-required-mark">*</span></label>
+              <div class="gl-date-field">
+                <input id="c01CheckOut" name="check_out" type="text" class="form-control gl-input gl-tabular" value="{{ q_checkout }}" placeholder="dd/mm/yyyy" autocomplete="off">
+                <span class="gl-date-field__icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </span>
+              </div>
+              <p id="c01CheckOutError" class="gl-field-error" hidden></p>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="gl-label" for="c01GuestCount">Số khách <span class="gl-required-mark">*</span></label>
+              <select id="c01GuestCount" name="guest_count" class="form-select gl-select gl-tabular">
+                {% for cnt in range(1, max_guest_limit + 1) %}
+                <option value="{{ cnt }}" {{ 'selected' if (q_guests | int) == cnt else '' }}>{{ cnt }} khách</option>
+                {% endfor %}
+              </select>
+              {% if max_guests is defined and max_guests %}
+              <p class="gl-helper">Tối đa {{ max_guest_limit }} khách mỗi phòng.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="gl-form-actions">
+            <a class="gl-btn gl-btn-secondary" href="{{ choose_room_url }}">Quay lại chọn phòng</a>
+            <button type="button" class="btn btn-primary gl-btn" data-gl-step-next="2">Tiếp tục sang Bước 2</button>
+          </div>
+        </section>
+
+        {# STEP 2 #}
+        <section id="bookingStep2" aria-labelledby="step2Title" hidden>
+          <h2 id="step2Title" class="mb-3">Bước 2: Thông tin người đặt và khách lưu trú</h2>
+
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="gl-label" for="bookerName">Họ tên người đặt <span class="gl-required-mark">*</span></label>
+              <input id="bookerName" name="booker_name" type="text" class="form-control gl-input" value="{{ pre_name }}">
+              <p id="bookerNameError" class="gl-field-error" hidden></p>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="gl-label" for="bookerPhone">Số điện thoại</label>
+              <input id="bookerPhone" name="booker_phone" type="tel" class="form-control gl-input gl-tabular" value="{{ pre_phone }}">
+              <p id="bookerPhoneError" class="gl-field-error" hidden></p>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="gl-label" for="bookerEmail">Email</label>
+              <input id="bookerEmail" name="booker_email" type="email" class="form-control gl-input">
+              <p id="bookerEmailError" class="gl-field-error" hidden></p>
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input id="bookerIsGuest1" class="form-check-input" type="checkbox">
+                <label class="form-check-label" for="bookerIsGuest1">Người đặt cũng là khách thứ nhất</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="gl-form-block">
+            <h3 class="mb-1">Danh sách khách lưu trú</h3>
+            <p class="gl-helper mb-2">Việc thanh toán trực tuyến chỉ thực hiện sau khi phát sinh hóa đơn.</p>
+            <div id="guestCardsContainer"></div>
+            <div class="gl-guest-list-footer">
+              <button id="addGuestBtn" type="button" class="gl-btn gl-btn--sm gl-btn-secondary">+ Thêm khách</button>
+              <span id="guestLimitHint" class="gl-helper mt-0"></span>
+            </div>
+          </div>
+
+          <div class="gl-form-actions">
+            <button type="button" class="gl-btn gl-btn-secondary" data-gl-step-prev="1">Quay lại Bước 1</button>
+            <button type="button" class="btn btn-primary gl-btn" data-gl-step-next="3">Tiếp tục sang Bước 3</button>
+          </div>
+        </section>
+
+        {# STEP 3 #}
+        <section id="bookingStep3" aria-labelledby="step3Title" hidden>
+          <h2 id="step3Title" class="mb-3">Bước 3: Xem lại và xác nhận đặt phòng</h2>
+
+          <div class="gl-panel mb-4">
+            <h3 class="mb-3">Thông tin người đặt</h3>
+            <div class="gl-folio__row gl-folio__row--dotted">
+              <span class="gl-folio__label">Họ tên người đặt</span>
+              <span id="reviewBookerName" class="gl-folio__value">—</span>
+            </div>
+            <div class="gl-folio__row gl-folio__row--dotted">
+              <span class="gl-folio__label">Số điện thoại</span>
+              <span id="reviewBookerPhone" class="gl-folio__value gl-tabular">Chưa cung cấp</span>
+            </div>
+            <div class="gl-folio__row gl-folio__row--dotted">
+              <span class="gl-folio__label">Email</span>
+              <span id="reviewBookerEmail" class="gl-folio__value">Chưa cung cấp</span>
+            </div>
+          </div>
+
+          <h3 class="mb-2">Khách lưu trú</h3>
+          <div class="gl-table-wrap mb-4">
+            <p id="c01GuestScrollHint" class="gl-table-scroll-hint" hidden>Bảng có 5 cột — kéo ngang để xem thêm.</p>
+            <div class="gl-table-scroll" data-gl-table-scroll data-gl-scroll-hint="c01GuestScrollHint" tabindex="0" role="region" aria-label="Danh sách khách lưu trú">
+              <table class="gl-table gl-table--client gl-table--guests">
+                <thead>
+                  <tr>
+                    <th scope="col">STT</th>
+                    <th scope="col">Khách hàng</th>
+                    <th scope="col">Loại khách</th>
+                    <th scope="col">CMND / CCCD</th>
+                    <th scope="col">Địa chỉ</th>
+                  </tr>
+                </thead>
+                <tbody id="reviewGuestsBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="bookingSubmitUnavailable" class="gl-alert gl-alert--info mb-3" role="status" tabindex="-1" hidden>
+            <div class="gl-alert__title">Chưa thể gửi đặt phòng trực tuyến</div>
+            <p class="mb-0">Quý khách vui lòng liên hệ trực tiếp quầy lễ tân để hoàn tất xác nhận đặt phòng.</p>
+          </div>
+
+          <div class="gl-form-actions">
+            <button type="button" class="gl-btn gl-btn-secondary" data-gl-step-prev="2">Quay lại Bước 2</button>
+            <button id="confirmBookingBtn" type="submit" class="btn btn-primary gl-btn">
+              Xác nhận đặt phòng
+            </button>
+          </div>
+        </section>
+      </form>
+    </div>
+
+    <aside class="col-12 col-lg-4" aria-labelledby="folioSummaryTitle">
+      <div class="gl-folio gl-summary-sticky">
+        <h2 id="folioSummaryTitle" class="mb-3">Tóm tắt đặt phòng</h2>
+        <div class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Phòng</span>
+          <span id="summaryRoomName" class="gl-folio__value">{{ selected_room.name if has_selected_room else 'Chưa chọn phòng' }}</span>
+        </div>
+        <div class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Ngày nhận phòng</span>
+          <span id="summaryCheckIn" class="gl-folio__value gl-tabular">—</span>
+        </div>
+        <div class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Ngày trả phòng</span>
+          <span id="summaryCheckOut" class="gl-folio__value gl-tabular">—</span>
+        </div>
+        <div class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Số đêm</span>
+          <span id="summaryNights" class="gl-folio__value gl-tabular">—</span>
+        </div>
+        <div class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Số khách</span>
+          <span id="summaryGuestCount" class="gl-folio__value gl-tabular">{{ q_guests }} / {{ max_guest_limit }} khách</span>
+        </div>
+        <div id="summaryNightlyRateRow" class="gl-folio__row gl-folio__row--dotted">
+          <span class="gl-folio__label">Đơn giá mỗi đêm</span>
+          <span id="summaryNightlyRate" class="gl-folio__value price-value">
+            {% set sum_p = namespace() %}
+            {% if has_selected_room %}{{ extract_pricing_ns(selected_room, sum_p) }}{% endif %}
+            {% if has_selected_room and sum_p.has_price %}
+              {{ format_vnd(sum_p.final_price) }}/đêm
+            {% elif has_selected_room and selected_room.price_display %}
+              {{ selected_room.price_display }}
+            {% else %}
+              Chưa có thông tin giá
+            {% endif %}
+          </span>
+        </div>
+
+        <div id="c01CostBreakdown" aria-live="polite">
+          <h3 class="gl-folio__section-title">Chi tiết chi phí lưu trú</h3>
+
+          <div id="c01QuoteLoading" class="gl-folio__loading" hidden>
+            <span>Đang cập nhật báo giá lưu trú...</span>
+          </div>
+
+          <div id="c01QuoteError" class="gl-alert gl-alert--danger mt-2 mb-2" role="alert" hidden>
+            <div class="gl-alert__title">Không thể lấy báo giá phòng</div>
+            <p id="c01QuoteErrorText" class="mb-0"></p>
+          </div>
+
+          <div id="c01QuoteLines">
+            {% if quote_data is defined and quote_data %}
+              {% if quote_data.list_price_display is defined and quote_data.list_price_display %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">Giá niêm yết</span>
+                <span class="gl-folio__value price-value {{ 'gl-folio__value--strike' if (quote_data.discount_display is defined and quote_data.discount_display) else '' }}">
+                  {{ quote_data.list_price_display }}
+                </span>
+              </div>
+              {% endif %}
+              {% if quote_data.discount_display is defined and quote_data.discount_display %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">Ưu đãi {{ quote_data.discount_percent_label | default('') }}</span>
+                <span class="gl-folio__value gl-folio__value--discount price-value">{{ quote_data.discount_display }}</span>
+              </div>
+              {% endif %}
+              {% if quote_data.effective_rate_display is defined and quote_data.effective_rate_display %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">Giá thuê sau ưu đãi</span>
+                <span class="gl-folio__value {{ 'gl-folio__value--promo' if (quote_data.discount_display is defined and quote_data.discount_display) else '' }} price-value">
+                  {{ quote_data.effective_rate_display }}
+                </span>
+              </div>
+              {% endif %}
+              {% if quote_data.nights is defined and quote_data.nights %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">Số đêm</span>
+                <span class="gl-folio__value gl-tabular">{{ quote_data.nights }}</span>
+              </div>
+              {% endif %}
+              {% if quote_data.room_subtotal_display is defined and quote_data.room_subtotal_display %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">Tiền phòng</span>
+                <span class="gl-folio__value price-value">{{ quote_data.room_subtotal_display }}</span>
+              </div>
+              {% endif %}
+              {% if quote_data.third_guest_surcharge_display is defined and quote_data.third_guest_surcharge_display %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">Phụ thu khách thứ 3</span>
+                <span class="gl-folio__value price-value">{{ quote_data.third_guest_surcharge_display }}</span>
+              </div>
+              {% endif %}
+              {% if quote_data.foreign_adjustment_display is defined and quote_data.foreign_adjustment_display %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">Hệ số khách nước ngoài (1,5)</span>
+                <span class="gl-folio__value price-value">{{ quote_data.foreign_adjustment_display }}</span>
+              </div>
+              {% endif %}
+              {% for fee in quote_data.other_fees | default([]) %}
+              <div class="gl-folio__row gl-folio__row--dotted">
+                <span class="gl-folio__label">{{ fee.label }}</span>
+                <span class="gl-folio__value price-value">{{ fee.amount_display }}</span>
+              </div>
+              {% endfor %}
+              <div class="gl-folio__row gl-folio__row--total">
+                <span class="gl-folio__label">Tổng tiền</span>
+                <span id="c01QuoteTotalValue" class="gl-folio__total-value price-value">{{ quote_data.total_display }}</span>
+              </div>
+            {% endif %}
+          </div>
+
+          <p id="c01QuoteFallbackNote" class="gl-helper mt-2 mb-0" {{ 'hidden' if (quote_data is defined and quote_data) else '' }}>
+            Tổng chi phí lưu trú sẽ được hệ thống tính toán và xác nhận theo ngày chọn và danh sách khách thực tế.
+          </p>
+        </div>
+        <div class="gl-folio__note">
+          <p class="gl-helper mt-0 mb-0">
+            Đơn giá áp dụng cho 2 khách cơ bản. Khách thứ 3 phụ thu 25%, phòng có khách nước ngoài nhân hệ số 1,5.
+            {% if policy_page_url is defined and policy_page_url %}
+            <a href="{{ policy_page_url }}">Xem quy định giá</a>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </aside>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/vn.js"></script>
+<script src="{{ url_for('static', filename='js/date-utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/booking.js') }}"></script>
+{% endblock %}

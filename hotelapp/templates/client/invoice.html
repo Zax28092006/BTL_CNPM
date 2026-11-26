@@ -1,0 +1,196 @@
+{% extends 'client/base_client.html' %}
+
+{% set active_client_nav = 'invoice' %}
+{% set show_client_bottom_nav = true %}
+{% set all_invoices = invoices if (invoices is defined and invoices is not none) else (invoices_list if (invoices_list is defined and invoices_list is not none) else ([invoice] if (invoice is defined and invoice) else [])) %}
+{% set selected_inv = invoice if (invoice is defined and invoice) else (all_invoices[0] if all_invoices else none) %}
+{% set current_pay_filter = (request.args.get('payment_status', '') if request is defined else '') %}
+{% set filter_url = invoice_filter_url | default('') %}
+
+{% block title %}Hóa đơn của tôi — The Valentia Hotel &amp; Suites{% endblock %}
+
+{% block content %}
+<div class="gl-container gl-container--client">
+  <div class="gl-page-head gl-no-print">
+    <div>
+      <h1 class="mb-1">Hóa đơn và trạng thái thanh toán</h1>
+      <p class="gl-helper mb-0">Theo dõi toàn bộ hóa đơn chưa thanh toán, đã thanh toán và lịch sử đối chiếu theo từng phiếu đặt phòng.</p>
+    </div>
+  </div>
+
+  {% if not (current_user is defined and current_user.is_authenticated) %}
+  <div class="gl-alert gl-alert--info" role="status">
+    <div class="gl-alert__title">Yêu cầu đăng nhập</div>
+    <p class="mb-2">Vui lòng đăng nhập bằng tài khoản khách hàng để xem hóa đơn của bạn.</p>
+    <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đăng nhập</a>
+  </div>
+  {% elif (invoice_error is defined and invoice_error) or (invoices_error is defined and invoices_error) %}
+  <div id="c04ErrorAlert" class="gl-alert gl-alert--danger" role="alert">
+    <div class="gl-alert__title">Không tải được thông tin hóa đơn</div>
+    <p class="mb-0">{{ invoice_error | default(invoices_error) }}</p>
+  </div>
+  {% else %}
+    {% if invoice_message is defined and invoice_message %}
+    <div class="gl-alert gl-alert--success mb-4 gl-no-print" role="status">{{ invoice_message }}</div>
+    {% endif %}
+    {% if payment_error is defined and payment_error %}
+    <div class="gl-alert gl-alert--danger mb-4 gl-no-print" role="alert">{{ payment_error }}</div>
+    {% endif %}
+
+    {% if invoices_loading is defined and invoices_loading %}
+    <div id="c04LoadingState" class="gl-panel mb-4" role="status" aria-live="polite">
+      Đang tải danh sách hóa đơn của bạn...
+    </div>
+    {% endif %}
+
+    {% if all_invoices %}
+    {# Filter Toolbar (server-side URL if provided, else interactive client filter over full real list) #}
+    <section class="gl-no-print mb-4" aria-labelledby="c04ListHeading">
+      <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+        <div>
+          <h2 id="c04ListHeading" class="h4 mb-1">Danh sách hóa đơn (<span id="c04VisibleCount" class="gl-tabular">{{ all_invoices | length }}</span>)</h2>
+          <p class="gl-helper mb-0">Sắp xếp hóa đơn mới nhất trước; bao gồm cả hóa đơn chưa thanh toán và đã thanh toán.</p>
+        </div>
+
+        <div id="c04PayFilterGroup" class="gl-tab-bar mb-0" role="group" aria-label="Lọc theo trạng thái thanh toán">
+          {% if filter_url %}
+          <a class="gl-btn gl-btn--sm {{ 'btn-primary' if not current_pay_filter else 'gl-btn-secondary' }}"
+             href="{{ filter_url }}">Tất cả</a>
+          <a class="gl-btn gl-btn--sm {{ 'btn-primary' if current_pay_filter == 'unpaid' else 'gl-btn-secondary' }}"
+             href="{{ filter_url }}?payment_status=unpaid">Chưa thanh toán</a>
+          <a class="gl-btn gl-btn--sm {{ 'btn-primary' if current_pay_filter == 'paid' else 'gl-btn-secondary' }}"
+             href="{{ filter_url }}?payment_status=paid">Đã thanh toán</a>
+          {% else %}
+          <button type="button" class="gl-tab-btn {{ 'is-active' if not current_pay_filter else '' }}" data-gl-invoice-filter="all">Tất cả</button>
+          <button type="button" class="gl-tab-btn {{ 'is-active' if current_pay_filter == 'unpaid' else '' }}" data-gl-invoice-filter="unpaid">Chưa thanh toán</button>
+          <button type="button" class="gl-tab-btn {{ 'is-active' if current_pay_filter == 'paid' else '' }}" data-gl-invoice-filter="paid">Đã thanh toán</button>
+          {% endif %}
+        </div>
+      </div>
+
+      <div id="c04InvoiceHistoryList" class="gl-record-list">
+        {% for inv in all_invoices %}
+        {% set is_sel = (selected_inv and ((inv.id and selected_inv.id and inv.id == selected_inv.id) or (inv.code and selected_inv.code and inv.code == selected_inv.code))) %}
+        {% set pay_state = inv.payment_status | default('') | lower %}
+        <article class="gl-record-row {{ 'border-dark' if is_sel else '' }}"
+                 data-gl-invoice-item
+                 data-gl-invoice-code="{{ inv.code | default('') }}"
+                 data-gl-payment-status="{{ pay_state }}">
+          <div class="min-w-0">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+              <strong class="gl-tabular">{{ inv.code | default('Hóa đơn #' ~ (inv.id | default(loop.index))) }}</strong>
+              {% if inv.booking_code %}
+              <span class="gl-chip gl-chip--neutral gl-tabular">Đặt phòng: {{ inv.booking_code }}</span>
+              {% endif %}
+              {% if inv.rental_slip_code %}
+              <span class="gl-chip gl-chip--neutral gl-tabular">Phiếu thuê: {{ inv.rental_slip_code }}</span>
+              {% endif %}
+              {% set chip_state = pay_state %}
+              {% set chip_label = inv.payment_status_label | default('Chưa thanh toán' if pay_state == 'unpaid' else ('Đã thanh toán' if pay_state == 'paid' else '')) %}
+              {% include 'partials/_status_chip.html' %}
+            </div>
+            <div class="fw-semibold">
+              {{ inv.room_name | default('Phòng lưu trú') }}{% if inv.room_type %} · {{ inv.room_type }}{% endif %}
+            </div>
+            <div class="gl-helper mt-1 mb-0 gl-tabular">
+              Ngày lập: {{ inv.issued_at | default('—') }}
+              {% if inv.check_in_display and inv.check_out_display %}
+               · {{ inv.check_in_display }} – {{ inv.check_out_display }}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            {% if inv.total_display %}
+            <span class="price-value {{ 'gl-price-current--promo' if inv.discount_display else '' }} me-2">{{ inv.total_display }}</span>
+            {% endif %}
+            {% if inv.view_url %}
+            <a class="gl-btn gl-btn--sm {{ 'btn-primary' if is_sel else 'gl-btn-secondary' }}" href="{{ inv.view_url }}">
+              {{ 'Đang xem' if is_sel else 'Xem hóa đơn' }}
+            </a>
+            {% endif %}
+            {% if pay_state != 'paid' and pay_state != 'completed' and (inv.pay_online_url or (online_payment_url is defined and online_payment_url)) %}
+              {% if inv.pay_online_url %}
+              <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ inv.pay_online_url }}">Thanh toán</a>
+              {% else %}
+              <form method="post" action="{{ online_payment_url }}" class="d-inline">
+                {% if inv.id %}<input type="hidden" name="invoice_id" value="{{ inv.id }}">{% endif %}
+                <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Thanh toán</button>
+              </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+
+      <div id="c04FilterEmptyBox" class="gl-alert gl-alert--info mt-3" role="status" hidden>
+        Không có hóa đơn phù hợp với trạng thái thanh toán đã chọn.
+      </div>
+    </section>
+
+    {% if selected_inv %}
+    <div class="row g-4 align-items-start">
+      <div class="col-12 col-lg-8">
+        {% set invoice = selected_inv %}
+        {% include 'partials/_invoice_folio.html' %}
+      </div>
+
+      <aside class="col-12 col-lg-4 gl-no-print" aria-label="Thao tác hóa đơn">
+        <div class="gl-panel">
+          <h2 class="h3 mb-3">Trạng thái và thao tác</h2>
+
+          {% if selected_inv.payment_status_label %}
+          <div class="mb-3">
+            <div class="gl-label">Trạng thái thanh toán</div>
+            {% set chip_state = selected_inv.payment_status %}
+            {% set chip_label = selected_inv.payment_status_label %}
+            {% include 'partials/_status_chip.html' %}
+          </div>
+          {% endif %}
+
+          {% if selected_inv.booking_code %}
+          <div class="mb-3">
+            <div class="gl-label">Phiếu đặt phòng liên kết</div>
+            <div class="gl-tabular fw-semibold">{{ selected_inv.booking_code }}</div>
+          </div>
+          {% endif %}
+
+          <p class="gl-helper mb-3">
+            Quý khách có thể thanh toán trực tuyến cho hóa đơn này hoặc thanh toán trực tiếp tại quầy lễ tân.
+          </p>
+
+          <div class="d-grid gap-2">
+            {% set sel_pay_state = selected_inv.payment_status | default('') | lower %}
+            {% if sel_pay_state != 'paid' and sel_pay_state != 'completed' %}
+              {% if online_payment_url is defined and online_payment_url %}
+              <form method="post" action="{{ online_payment_url }}" data-gl-online-pay-form>
+                {% if selected_inv.id %}<input type="hidden" name="invoice_id" value="{{ selected_inv.id }}">{% endif %}
+                {% if selected_inv.code %}<input type="hidden" name="code" value="{{ selected_inv.code }}">{% endif %}
+                <button type="submit" class="btn btn-primary gl-btn w-100">Thanh toán trực tuyến</button>
+              </form>
+              {% elif selected_inv.pay_online_url %}
+              <a class="btn btn-primary gl-btn w-100" href="{{ selected_inv.pay_online_url }}">Thanh toán trực tuyến</a>
+              {% endif %}
+            {% endif %}
+
+            <button type="button" class="gl-btn gl-btn-secondary w-100" data-gl-print-trigger>In hóa đơn</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+    {% endif %}
+    {% else %}
+      {% set empty_title = 'Bạn chưa có hóa đơn nào.' %}
+      {% set empty_desc = 'Thông tin hóa đơn sẽ được hiển thị tại đây khi phát sinh từ đặt phòng hoặc phiếu thuê phòng.' %}
+      {% set empty_cta_label = 'Xem Đặt phòng của tôi' %}
+      {% set empty_cta_href = client_nav_urls.bookings if (client_nav_urls is defined and client_nav_urls and client_nav_urls.bookings) else url_for('index') %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/client-pages.js') }}"></script>
+{% endblock %}

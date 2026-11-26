@@ -1,0 +1,242 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 's02' %}
+{% set can_view_staff = is_staff_authorized | default(false) %}
+{% set max_guest_limit = max_guests if (max_guests is defined and max_guests) else 3 %}
+{% set booked_action = create_from_booking_url | default('') %}
+{% set walkin_action = create_walkin_url | default('') %}
+{% set cancel_href = booking_lookup_url if (booking_lookup_url is defined and booking_lookup_url) else url_for('index') %}
+
+{% block title %}Lập phiếu thuê phòng (S02) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Nghiệp vụ Lễ tân{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" crossorigin="anonymous">
+{% endblock %}
+
+{% block content %}
+<div class="gl-page-head">
+  <div>
+    <h1 class="mb-1">Lập phiếu thuê phòng</h1>
+    <p class="gl-helper mb-0">Thực hiện nhận phòng từ phiếu đặt trước hoặc lập phiếu thuê cho khách đến trực tiếp tại quầy.</p>
+  </div>
+</div>
+
+{% if not can_view_staff %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Nhân viên lễ tân</div>
+  <p class="mb-2">Vui lòng đăng nhập bằng tài khoản Nhân viên hoặc Quản trị viên để lập phiếu thuê phòng.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  {% if slip_error is defined and slip_error %}
+  <div class="gl-alert gl-alert--danger mb-4" role="alert">{{ slip_error }}</div>
+  {% elif slip_success is defined and slip_success %}
+  <div class="gl-alert gl-alert--success mb-4" role="status">{{ slip_success }}</div>
+  {% endif %}
+
+  <div class="gl-tab-bar" role="tablist" data-gl-tablist aria-label="Chọn nguồn lập phiếu thuê">
+    <button type="button"
+            class="gl-tab-btn {{ 'is-active' if (flow_mode | default('booked')) == 'booked' else '' }}"
+            role="tab"
+            aria-selected="{{ 'true' if (flow_mode | default('booked')) == 'booked' else 'false' }}"
+            aria-controls="flowBookedPanel">
+      1. Từ phiếu đặt trước
+    </button>
+    <button type="button"
+            class="gl-tab-btn {{ 'is-active' if (flow_mode | default('booked')) == 'walkin' else '' }}"
+            role="tab"
+            aria-selected="{{ 'true' if (flow_mode | default('booked')) == 'walkin' else 'false' }}"
+            aria-controls="flowWalkInPanel">
+      2. Khách đến trực tiếp
+    </button>
+  </div>
+
+  <div class="row g-4 align-items-start">
+    <div class="col-12 col-xl-8">
+      {# FLOW 1: FROM EXISTING BOOKING #}
+      <section id="flowBookedPanel" role="tabpanel" {{ 'hidden' if (flow_mode | default('booked')) != 'booked' else '' }}>
+        {% if selected_booking is defined and selected_booking %}
+        <div id="s02BookedUnavailable" class="gl-alert gl-alert--info mb-3" role="status" tabindex="-1" hidden>
+          <div class="gl-alert__title">Chưa thể hoàn tất lập phiếu thuê</div>
+          <p class="mb-0">Chức năng xác nhận lập phiếu từ phiếu đặt trước hiện đang được cập nhật.</p>
+        </div>
+
+        <form id="bookedRentalForm" class="gl-panel" method="post" action="{{ booked_action }}" novalidate>
+          <input type="hidden" name="booking_id" value="{{ selected_booking.id }}">
+          <h2 class="h3 mb-3">Thông tin từ phiếu đặt {{ selected_booking.code | default('') }}</h2>
+          <div class="gl-folio__row gl-folio__row--dotted">
+            <span class="gl-folio__label">Người đặt</span>
+            <span class="gl-folio__value">{{ selected_booking.customer_name | default('—') }}</span>
+          </div>
+          <div class="gl-folio__row gl-folio__row--dotted">
+            <span class="gl-folio__label">Phòng</span>
+            <span class="gl-folio__value">{{ selected_booking.room_name | default('—') }}</span>
+          </div>
+          <div class="gl-folio__row gl-folio__row--dotted">
+            <span class="gl-folio__label">Thời gian dự kiến</span>
+            <span class="gl-folio__value gl-tabular">{{ selected_booking.check_in_display | default('—') }} – {{ selected_booking.check_out_display | default('—') }}</span>
+          </div>
+          <div class="gl-form-actions">
+            <a class="gl-btn gl-btn-secondary" href="{{ cancel_href }}" data-gl-cancel-rental>Hủy</a>
+            <button type="submit" class="btn btn-primary gl-btn">Xác nhận lập phiếu thuê</button>
+          </div>
+        </form>
+        {% else %}
+          {% set empty_title = 'Chưa chọn phiếu đặt phòng' %}
+          {% set empty_desc = 'Vui lòng tra cứu và chọn một phiếu đặt hợp lệ từ màn hình Tra cứu đặt phòng trước khi lập phiếu.' %}
+          {% set empty_cta_label = 'Sang Tra cứu đặt phòng' if booking_lookup_url is defined and booking_lookup_url else '' %}
+          {% set empty_cta_href = booking_lookup_url | default('') %}
+          {% include 'partials/_empty_state.html' %}
+        {% endif %}
+      </section>
+
+      {# FLOW 2: DIRECT GUEST AT COUNTER #}
+      <section id="flowWalkInPanel" role="tabpanel" {{ 'hidden' if (flow_mode | default('booked')) != 'walkin' else '' }}>
+        <div id="s02ErrorSummary" class="gl-error-summary mb-3" role="alert" tabindex="-1" hidden>
+          <p id="s02ErrorSummaryTitle" class="gl-error-summary__title"></p>
+          <ul id="s02ErrorSummaryList" class="gl-error-summary__list"></ul>
+        </div>
+
+        <div id="s02SubmitUnavailable" class="gl-alert gl-alert--info mb-3" role="status" tabindex="-1" hidden>
+          <div class="gl-alert__title">Chưa thể lưu phiếu thuê mới</div>
+          <p class="mb-0">Thông tin phiếu thuê khách đến trực tiếp đã hợp lệ. Chức năng lưu phiếu tại quầy hiện đang được cập nhật.</p>
+        </div>
+
+        <form id="walkInRentalForm"
+              class="gl-panel"
+              method="post"
+              action="{{ walkin_action }}"
+              data-gl-max-guests="{{ max_guest_limit }}"
+              novalidate>
+          <input id="walkInGuestsJson" type="hidden" name="guests_json" value="">
+
+          <h2 class="h3 mb-3">Thông tin nhận phòng khách đến trực tiếp</h2>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="gl-label" for="walkInRoom">Chọn phòng <span class="gl-required-mark">*</span></label>
+              <select id="walkInRoom" name="room_id" class="form-select gl-select" required aria-describedby="walkInRoomError">
+                <option value="">Chọn phòng từ danh sách hiện có</option>
+                {% for r in available_rooms | default([]) %}
+                <option value="{{ r.id }}" {{ 'disabled' if r.state in ['full', 'maintenance', 'unavailable'] else '' }}>
+                  {{ r.name }}{% if r.state_label %} ({{ r.state_label }}){% endif %}
+                </option>
+                {% endfor %}
+              </select>
+              <p id="walkInRoomError" class="gl-field-error" hidden></p>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="gl-label" for="walkInCustomerName">Họ tên khách đại diện <span class="gl-required-mark">*</span></label>
+              <input id="walkInCustomerName" name="customer_name" type="text" class="form-control gl-input" required aria-describedby="walkInCustomerNameError">
+              <p id="walkInCustomerNameError" class="gl-field-error" hidden></p>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="gl-label" for="walkInCustomerPhone">Số điện thoại <span class="gl-required-mark">*</span></label>
+              <input id="walkInCustomerPhone" name="customer_phone" type="tel" class="form-control gl-input gl-tabular" required aria-describedby="walkInCustomerPhoneError">
+              <p id="walkInCustomerPhoneError" class="gl-field-error" hidden></p>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="gl-label" for="walkInCheckInDisplay">Ngày nhận phòng <span class="gl-required-mark">*</span></label>
+              <div class="gl-date-input-wrap">
+                <input id="walkInCheckInDisplay"
+                       type="text"
+                       class="form-control gl-input gl-tabular gl-date-input"
+                       placeholder="dd/mm/yyyy"
+                       autocomplete="off"
+                       required
+                       aria-describedby="walkInCheckInError">
+                <button type="button" class="gl-date-input-icon" data-gl-open-picker="walkInCheckInDisplay" aria-label="Mở lịch chọn ngày nhận phòng">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </button>
+              </div>
+              <input id="walkInCheckIn" name="check_in" type="hidden" value="">
+              <p id="walkInCheckInError" class="gl-field-error" hidden></p>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="gl-label" for="walkInCheckOutDisplay">Ngày trả phòng <span class="gl-required-mark">*</span></label>
+              <div class="gl-date-input-wrap">
+                <input id="walkInCheckOutDisplay"
+                       type="text"
+                       class="form-control gl-input gl-tabular gl-date-input"
+                       placeholder="dd/mm/yyyy"
+                       autocomplete="off"
+                       required
+                       aria-describedby="walkInCheckOutError">
+                <button type="button" class="gl-date-input-icon" data-gl-open-picker="walkInCheckOutDisplay" aria-label="Mở lịch chọn ngày trả phòng">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </button>
+              </div>
+              <input id="walkInCheckOut" name="check_out" type="hidden" value="">
+              <p id="walkInCheckOutError" class="gl-field-error" hidden></p>
+            </div>
+          </div>
+
+          <div class="gl-form-block">
+            <h3 class="mb-1">Danh sách khách lưu trú (tối đa {{ max_guest_limit }} khách)</h3>
+            <div id="walkInGuestsContainer"></div>
+            <div class="gl-guest-list-footer">
+              <button id="walkInAddGuestBtn" type="button" class="gl-btn gl-btn--sm gl-btn-secondary">+ Thêm khách</button>
+              <span id="walkInGuestHint" class="gl-helper mt-0"></span>
+            </div>
+          </div>
+
+          <div class="gl-form-actions">
+            <a class="gl-btn gl-btn-secondary" href="{{ cancel_href }}" data-gl-cancel-rental>Hủy</a>
+            <button type="submit" class="btn btn-primary gl-btn">Xác nhận lập phiếu thuê</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <aside class="col-12 col-xl-4" aria-label="Lưu ý lập phiếu thuê">
+      <div class="gl-folio">
+        <h2 class="h3 mb-3">Tóm tắt quy định lập phiếu</h2>
+        {% if quote_data is defined and quote_data %}
+        <div class="gl-folio__row gl-folio__row--total">
+          <span class="gl-folio__label">Tạm tính</span>
+          <span class="gl-folio__total-value price-value">{{ quote_data.total_display }}</span>
+        </div>
+        {% endif %}
+        <p class="gl-helper mb-0">
+          Mỗi phòng lưu trú tối đa {{ max_guest_limit }} khách theo quy định hiện hành. Việc thu tiền được thực hiện tại màn hình thanh toán ở quầy.
+        </p>
+      </div>
+    </aside>
+  </div>
+{% endif %}
+
+<div class="modal fade" id="s02CancelConfirmModal" tabindex="-1" aria-labelledby="s02CancelConfirmLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="s02CancelConfirmLabel">Hủy lập phiếu thuê?</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Thông tin bạn đã nhập trên phiếu thuê hiện tại chưa được lưu. Bạn có chắc chắn muốn rời khỏi màn hình này?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-bs-dismiss="modal">Ở lại chỉnh sửa</button>
+        <a id="s02ConfirmLeaveLink" class="gl-btn gl-btn--sm gl-btn-danger-outline" href="{{ cancel_href }}">Rời khỏi</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/vn.js" crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='js/date-utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/staff-pages.js') }}"></script>
+{% endblock %}

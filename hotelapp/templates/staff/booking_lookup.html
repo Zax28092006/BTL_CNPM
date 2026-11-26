@@ -1,0 +1,137 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 's01' %}
+{% set can_view_staff = is_staff_authorized | default(false) %}
+{% set lookup_url = booking_lookup_url | default('') %}
+{% set walkin_url = create_rental_slip_url | default('') %}
+{% set current_kw = (request.args.get('kw', '') if request is defined else '') %}
+
+{% block title %}Tra cứu đặt phòng (S01) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Nghiệp vụ Lễ tân{% endblock %}
+
+{% block content %}
+<div class="gl-page-head">
+  <div>
+    <h1 class="mb-1">Tra cứu đặt phòng</h1>
+    <p class="gl-helper mb-0">Tìm phiếu đặt theo họ tên khách, mã phiếu, số điện thoại hoặc CMND/CCCD để lập phiếu thuê.</p>
+  </div>
+</div>
+
+{% if not can_view_staff %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Nhân viên lễ tân</div>
+  <p class="mb-2">Vui lòng đăng nhập bằng tài khoản Nhân viên hoặc Quản trị viên để tra cứu phiếu đặt phòng tại quầy.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+<div class="row g-4 align-items-start">
+  <div class="col-12 col-xl-8">
+    <form id="s01LookupForm" class="gl-toolbar row g-2 align-items-end" method="get" action="{{ lookup_url }}" novalidate>
+      <div class="col-12 col-md-8">
+        <label class="gl-label" for="s01SearchKw">Từ khóa tra cứu</label>
+        <input id="s01SearchKw"
+               name="kw"
+               type="search"
+               class="form-control gl-input"
+               value="{{ current_kw }}"
+               placeholder="Nhập họ tên người đặt, mã phiếu, SĐT hoặc CCCD">
+        <p id="s01SearchKwError" class="gl-field-error" hidden></p>
+      </div>
+      <div class="col-12 col-md-auto">
+        <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Tra cứu</button>
+      </div>
+    </form>
+
+    <div id="s01LookupNotice" class="gl-alert gl-alert--info mb-4" role="status" hidden>
+      <div class="gl-alert__title">Chưa thể tra cứu trực tiếp</div>
+      <p class="mb-0">Chức năng tra cứu phiếu đặt phòng tại quầy hiện đang được cập nhật.</p>
+    </div>
+
+    {% if lookup_error is defined and lookup_error %}
+    <div class="gl-alert gl-alert--danger" role="alert">
+      <div class="gl-alert__title">Không tải được kết quả tra cứu</div>
+      <p class="mb-0">{{ lookup_error }}</p>
+    </div>
+    {% elif bookings is defined and bookings %}
+    <div class="gl-table-wrap">
+      <p id="s01ScrollHint" class="gl-table-scroll-hint" hidden>Bảng có 7 cột — kéo ngang để xem thêm.</p>
+      <div class="gl-table-scroll" data-gl-table-scroll data-gl-scroll-hint="s01ScrollHint" tabindex="0" role="region" aria-label="Kết quả tra cứu đặt phòng">
+        <table class="gl-table gl-table--staff gl-table--wide-7">
+          <thead>
+            <tr>
+              <th scope="col" class="gl-col-sticky">Mã phiếu</th>
+              <th scope="col">Người đặt</th>
+              <th scope="col">Phòng</th>
+              <th scope="col">Ngày nhận – trả</th>
+              <th scope="col" class="table-numeric">Số khách</th>
+              <th scope="col">Trạng thái</th>
+              <th scope="col">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bookings %}
+            <tr>
+              <td class="gl-col-sticky gl-tabular">{{ b.code | default('—') }}</td>
+              <td>{{ b.customer_name | default('—') }}</td>
+              <td>{{ b.room_name | default('—') }}</td>
+              <td class="gl-tabular">{{ b.check_in_display | default('—') }} – {{ b.check_out_display | default('—') }}</td>
+              <td class="table-numeric gl-tabular">{{ b.guest_count | default('—') }}</td>
+              <td>
+                <div class="d-flex flex-wrap gap-1">
+                  {% set chip_state = b.status | default('') %}
+                  {% set chip_label = b.status_label | default('') %}
+                  {% include 'partials/_status_chip.html' %}
+                  {% if b.payment_status_label or b.payment_status %}
+                    {% set chip_state = b.payment_status | default('') %}
+                    {% set chip_label = b.payment_status_label | default('Chưa thanh toán' if b.payment_status == 'unpaid' else ('Đã thanh toán' if b.payment_status == 'paid' else b.payment_status)) %}
+                    {% include 'partials/_status_chip.html' %}
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                {% if b.create_rental_url %}
+                <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ b.create_rental_url }}">Lập phiếu thuê</a>
+                {% else %}
+                <span class="gl-helper">Chưa khả dụng</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% elif (bookings is defined and bookings is not none) or current_kw %}
+      {% set empty_title = 'Không tìm thấy phiếu đặt phòng' %}
+      {% set empty_desc = 'Không có phiếu đặt nào khớp với tiêu chí tra cứu. Vui lòng kiểm tra lại họ tên có dấu hoặc không dấu.' %}
+      {% include 'partials/_empty_state.html' %}
+    {% else %}
+      {% set empty_title = 'Nhập thông tin khách hàng để tra cứu' %}
+      {% set empty_desc = 'Tìm kiếm phiếu đặt phòng theo họ tên, mã phiếu đặt, số điện thoại hoặc số CMND/CCCD.' %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  </div>
+
+  <aside class="col-12 col-xl-4" aria-label="Lập phiếu cho khách đến trực tiếp">
+    <div class="gl-panel">
+      <h2 class="h3 mb-2">Khách đến trực tiếp tại quầy</h2>
+      <p class="gl-helper mb-3">
+        Nếu khách chưa có phiếu đặt trước, lễ tân có thể chuyển sang màn hình lập phiếu thuê cho khách đến trực tiếp.
+      </p>
+      {% if walkin_url %}
+      <a class="btn btn-primary gl-btn w-100" href="{{ walkin_url }}">Lập phiếu khách đến trực tiếp</a>
+      {% else %}
+      <button id="s01WalkInFallbackBtn" type="button" class="btn btn-primary gl-btn w-100">Lập phiếu khách đến trực tiếp</button>
+      <div id="s01WalkInNotice" class="gl-alert gl-alert--info mt-3 mb-0" role="status" hidden>
+        Chức năng chuyển nhanh sang màn hình lập phiếu tại quầy hiện đang được cập nhật.
+      </div>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/staff-pages.js') }}"></script>
+{% endblock %}

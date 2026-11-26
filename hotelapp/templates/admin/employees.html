@@ -1,0 +1,279 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 'a05' %}
+{% set is_emp_admin = current_user is defined and current_user.is_authenticated and (current_user.role is defined and (current_user.role.name == 'ADMIN' if current_user.role.name is defined else current_user.role == 'ADMIN')) %}
+{% set can_view_admin = is_admin_authorized | default(is_emp_admin) %}
+{% set filter_url = employees_url | default('') %}
+{% set create_url = employee_create_url | default('') %}
+{% set current_kw = (request.args.get('kw', '') if request is defined else '') %}
+{% set current_status = (request.args.get('status', '') if request is defined else '') %}
+{% set roles_list = employee_roles | default([
+  {'value': 'STAFF', 'label': 'Nhân viên lễ tân'},
+  {'value': 'ADMIN', 'label': 'Quản trị viên'}
+]) %}
+
+{% block title %}Tài khoản nhân viên (A05) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Quản trị hệ thống{% endblock %}
+
+{% block content %}
+<div class="gl-page-head">
+  <div>
+    <h1 class="mb-1">Quản lý tài khoản nhân viên</h1>
+    <p class="gl-helper mb-0">Quản lý danh sách tài khoản, phân quyền vai trò, trạng thái hoạt động và đặt lại mật khẩu.</p>
+  </div>
+  {% if can_view_admin %}
+  <button id="openAddEmployeeBtn"
+          type="button"
+          class="btn btn-primary gl-btn gl-btn--sm"
+          data-gl-create-url="{{ create_url }}">
+    + Thêm nhân viên
+  </button>
+  {% endif %}
+</div>
+
+{% if not can_view_admin %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Quản trị viên</div>
+  <p class="mb-2">Vui lòng đăng nhập bằng tài khoản Quản trị viên để quản lý tài khoản nhân viên.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  {% if employee_message is defined and employee_message %}
+  <div class="gl-alert gl-alert--success mb-4" role="status">{{ employee_message }}</div>
+  {% endif %}
+  {% if employee_error is defined and employee_error %}
+  <div class="gl-alert gl-alert--danger mb-4" role="alert">{{ employee_error }}</div>
+  {% endif %}
+
+  {% if temp_password is defined and temp_password %}
+  <div class="gl-alert gl-alert--success mb-4" role="status">
+    <div class="gl-alert__title">Mật khẩu tạm thời đã được tạo</div>
+    <p class="mb-2">
+      Tài khoản <strong>{{ reset_employee_name | default('nhân viên') }}</strong> được cấp mật khẩu tạm thời:
+      <code id="a05TempPasswordCode" class="px-2 py-1 bg-white border rounded gl-tabular">{{ temp_password }}</code>
+    </p>
+    <button id="copyTempPasswordBtn" type="button" class="gl-btn gl-btn--sm gl-btn-secondary">Sao chép mật khẩu tạm</button>
+  </div>
+  {% endif %}
+
+  <form id="a05FilterForm" class="gl-toolbar row g-2 align-items-end" method="get" action="{{ filter_url }}" novalidate>
+    <div class="col-12 col-md-5">
+      <label class="gl-label" for="a05SearchKw">Từ khóa tìm kiếm</label>
+      <input id="a05SearchKw" name="kw" type="search" class="form-control gl-input" value="{{ current_kw }}" placeholder="Họ tên, email hoặc tên đăng nhập">
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+      <label class="gl-label" for="a05StatusFilter">Trạng thái</label>
+      <select id="a05StatusFilter" name="status" class="form-select gl-select">
+        <option value="">Tất cả</option>
+        <option value="active" {{ 'selected' if current_status == 'active' else '' }}>Hoạt động</option>
+        <option value="locked" {{ 'selected' if current_status == 'locked' else '' }}>Đã khóa</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-auto">
+      <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Lọc</button>
+    </div>
+  </form>
+
+  <div id="a05FilterNotice" class="gl-alert gl-alert--info mb-4" role="status" hidden>
+    Chức năng lọc danh sách tài khoản nhân viên hiện đang được cập nhật.
+  </div>
+
+  {% if employees is defined and employees %}
+  <div class="gl-table-wrap">
+    <p id="a05ScrollHint" class="gl-table-scroll-hint" hidden>Bảng có 7 cột — kéo ngang để xem thêm.</p>
+    <div class="gl-table-scroll" data-gl-table-scroll data-gl-scroll-hint="a05ScrollHint" tabindex="0" role="region" aria-label="Danh sách tài khoản nhân viên">
+      <table class="gl-table gl-table--staff gl-table--wide-7">
+        <thead>
+          <tr>
+            <th scope="col" class="gl-col-sticky">Họ tên</th>
+            <th scope="col">Tên đăng nhập</th>
+            <th scope="col">Email</th>
+            <th scope="col">Vai trò</th>
+            <th scope="col">Trạng thái</th>
+            <th scope="col">Ngày tạo</th>
+            <th scope="col">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in employees %}
+          {% set is_locked = (emp.status == 'locked') %}
+          <tr>
+            <td class="gl-col-sticky fw-semibold">{{ emp.name | default('—') }}</td>
+            <td class="gl-tabular">{{ emp.username | default('—') }}</td>
+            <td>{{ emp.email | default('—') }}</td>
+            <td>{{ emp.role_label | default(emp.role | default('—')) }}</td>
+            <td>
+              {% set chip_state = emp.status | default('active') %}
+              {% set chip_label = emp.status_label | default('Hoạt động' if emp.status != 'locked' else 'Đã khóa') %}
+              {% include 'partials/_status_chip.html' %}
+            </td>
+            <td class="gl-tabular">{{ emp.created_at_display | default('—') }}</td>
+            <td>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="gl-btn gl-btn--sm gl-btn-secondary"
+                        data-gl-edit-employee
+                        data-gl-update-url="{{ emp.update_url | default('') }}"
+                        data-gl-employee='{{ emp | tojson }}'>Sửa</button>
+                <button type="button"
+                        class="gl-btn gl-btn--sm gl-btn-secondary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#toggleEmployeeModal"
+                        data-gl-toggle-employee
+                        data-gl-toggle-url="{{ emp.toggle_url | default('') }}"
+                        data-gl-emp-name="{{ emp.name | default(emp.username | default('tài khoản này')) }}"
+                        data-gl-emp-locked="{{ '1' if is_locked else '0' }}">
+                  {{ 'Mở khóa' if is_locked else 'Khóa' }}
+                </button>
+                <button type="button"
+                        class="gl-btn gl-btn--sm gl-btn-secondary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#resetPasswordModal"
+                        data-gl-reset-employee
+                        data-gl-reset-url="{{ emp.reset_password_url | default('') }}"
+                        data-gl-emp-name="{{ emp.name | default(emp.username | default('tài khoản này')) }}">Đặt lại mật khẩu</button>
+                <button type="button"
+                        class="gl-btn gl-btn--sm gl-btn-danger-outline"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteEmployeeModal"
+                        data-gl-delete-employee
+                        data-gl-delete-url="{{ emp.delete_url | default('') }}"
+                        data-gl-emp-name="{{ emp.name | default(emp.username | default('tài khoản này')) }}">Xóa</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+    {% set empty_title = 'Chưa có tài khoản nhân viên.' %}
+    {% set empty_desc = 'Danh sách tài khoản nhân viên lễ tân và quản trị viên sẽ hiển thị tại đây khi có dữ liệu.' %}
+    {% include 'partials/_empty_state.html' %}
+  {% endif %}
+{% endif %}
+
+<div id="employeeEditorDrawer" class="gl-drawer-backdrop" role="dialog" aria-modal="true" aria-labelledby="employeeDrawerTitle" hidden>
+  <div class="gl-drawer-panel">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+      <h2 id="employeeDrawerTitle" class="h3 mb-0">Thông tin tài khoản nhân viên</h2>
+      <button id="closeEmployeeDrawerBtn" type="button" class="btn-close" aria-label="Đóng"></button>
+    </div>
+
+    <div id="a05EmployeeSaveNotice" class="gl-alert gl-alert--info mb-3" role="status" hidden>
+      Thông tin tài khoản đã hợp lệ. Chức năng lưu tài khoản nhân viên hiện đang được cập nhật.
+    </div>
+
+    <form id="employeeEditorForm" method="post" action="" novalidate>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="gl-label" for="empFieldName">Họ và tên <span class="gl-required-mark">*</span></label>
+          <input id="empFieldName" name="name" type="text" class="form-control gl-input" required>
+          <p id="empFieldNameError" class="gl-field-error" hidden></p>
+        </div>
+        <div class="col-12">
+          <label class="gl-label" for="empFieldUsername">Tên đăng nhập <span class="gl-required-mark">*</span></label>
+          <input id="empFieldUsername" name="username" type="text" class="form-control gl-input gl-tabular" required>
+          <p id="empFieldUsernameError" class="gl-field-error" hidden></p>
+        </div>
+        <div class="col-12">
+          <label class="gl-label" for="empFieldEmail">Email <span class="gl-required-mark">*</span></label>
+          <input id="empFieldEmail" name="email" type="email" class="form-control gl-input" required>
+          <p id="empFieldEmailError" class="gl-field-error" hidden></p>
+        </div>
+        <div class="col-12">
+          <label class="gl-label" for="empFieldRole">Vai trò</label>
+          <select id="empFieldRole" name="role" class="form-select gl-select">
+            {% for rl in roles_list %}
+            <option value="{{ rl.value }}">{{ rl.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div id="empInitialPasswordRow" class="col-12">
+          <label class="gl-label" for="empFieldPassword">Mật khẩu ban đầu</label>
+          <input id="empFieldPassword" name="password" type="password" class="form-control gl-input" autocomplete="new-password">
+          <p class="gl-helper mb-0">Để trống nếu dùng quy trình cấp mật khẩu từ quản trị.</p>
+        </div>
+      </div>
+
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary gl-btn">Lưu tài khoản</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="toggleEmployeeModal" tabindex="-1" aria-labelledby="toggleEmployeeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="toggleEmployeeModalLabel">Cập nhật trạng thái tài khoản</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p id="toggleEmployeeMessage" class="mb-2"></p>
+        <div id="a05ToggleNotice" class="gl-alert gl-alert--info mb-0" role="status" hidden>
+          Chức năng cập nhật trạng thái tài khoản nhân viên hiện đang được cập nhật.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="toggleEmployeeForm" method="post" action="">
+          <button id="toggleEmployeeConfirmBtn" type="submit" class="btn btn-primary gl-btn gl-btn--sm">Xác nhận</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="resetPasswordModalLabel">Đặt lại mật khẩu nhân viên</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Xác nhận yêu cầu đặt lại mật khẩu cho tài khoản <strong id="resetEmployeeName">nhân viên</strong>?</p>
+        <div id="a05ResetNotice" class="gl-alert gl-alert--info mb-0" role="status" hidden>
+          Chức năng đặt lại mật khẩu nhân viên hiện đang được cập nhật.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="resetPasswordForm" method="post" action="">
+          <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Xác nhận đặt lại</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteEmployeeModal" tabindex="-1" aria-labelledby="deleteEmployeeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="deleteEmployeeModalLabel">Xác nhận xóa tài khoản</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Xóa tài khoản nhân viên <strong id="deleteEmployeeName">này</strong>? Hành động này không thể hoàn tác.</p>
+        <div id="a05DeleteNotice" class="gl-alert gl-alert--info mb-0" role="status" hidden>
+          Chức năng xóa tài khoản nhân viên hiện đang được cập nhật.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <form id="deleteEmployeeForm" method="post" action="">
+          <button type="submit" class="gl-btn gl-btn--sm gl-btn-danger-outline">Xóa tài khoản</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/admin-pages.js') }}"></script>
+{% endblock %}

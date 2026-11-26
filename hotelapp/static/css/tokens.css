@@ -1,0 +1,89 @@
+/* The Valentia Hotel & Suites — Design Tokens (Navy · Gold · Ivory) */
+
+:root {
+  /* Brand & Surface Palette (đo khớp logo.png & đạt chuẩn WCAG 2.1) */
+  --gl-navy-900: #0B1D3A;
+  --gl-navy-rgb: 11, 29, 58;
+  --gl-navy-700: #16315F;
+  --gl-navy-700-rgb: 22, 49, 95;
+
+  --gl-gold: #D4AF37;
+  --gl-gold-rgb: 212, 175, 55;
+  --gl-gold-hover: #C59F27;
+  --gl-gold-border: #B58E1E;
+  --gl-gold-ink: #8A6A1F;
+  --gl-gold-ink-rgb: 138, 106, 31;
+  --gl-gold-soft: #F6EED9;
+
+  /* Light Surfaces (Ivory) */
+  --gl-paper: #FAF8F3;
+  --gl-paper-rgb: 250, 248, 243;
+  --gl-paper-2: #F3EFE4;
+  --gl-paper-3: #E9E3D3;
+
+  /* Ink & Neutrals */
+  --gl-ink: #1B2433;
+  --gl-ink-rgb: 27, 36, 51;
+  --gl-ink-2: #2B3648;
+  --gl-muted: #5B6578;
+
+  --gl-rule: #DAD5C8;
+  --gl-border: #767F8F;
+  --gl-border-rgb: 118, 127, 143;
+
+  /* Semantic Aliases (giữ tương thích tên biến CSS dùng chung) */
+  --gl-brass: var(--gl-gold);
+  --gl-brass-ink: var(--gl-gold-ink);
+  --gl-brass-ink-rgb: var(--gl-gold-ink-rgb);
+  --gl-brass-hover: var(--gl-navy-900);
+  --gl-brass-soft: var(--gl-gold-soft);
+
+  /* Status & Focus */
+  --gl-success: #1F7A4D;
+  --gl-success-rgb: 31, 122, 77;
+  --gl-warning: #9A5B13;
+  --gl-warning-rgb: 154, 91, 19;
+  --gl-danger: #B42318;
+  --gl-danger-rgb: 180, 35, 24;
+  --gl-price-old: #8A8F98;
+  --gl-promo-soft: #FDECEA;
+  --gl-promo-border: #F5C2C0;
+  --gl-focus: #16315F;
+  --gl-focus-rgb: 22, 49, 95;
+
+  /* Dark Surface Text (trên Navy #0B1D3A) */
+  --gl-on-dark: #FAF8F3;
+  --gl-on-dark-muted: #C7CFDF;
+
+  /* Typography (Lora 500/600 + Hanken Grotesk 400/500/600, Georgia fallback) */
+  --font-display: Lora, Georgia, "Times New Roman", serif;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+
+  /* Spacing scale (4px base) */
+  --gl-space-1: 4px;
+  --gl-space-2: 8px;
+  --gl-space-3: 12px;
+  --gl-space-4: 16px;
+  --gl-space-6: 24px;
+  --gl-space-8: 32px;
+  --gl-space-12: 48px;
+  --gl-space-16: 64px;
+
+  /* Radius (6px mặc định, 4px cho chip nhỏ) & Elevation nhẹ */
+  --gl-radius-sm: 4px;
+  --gl-radius-md: 6px;
+  --gl-radius-lg: 6px;
+  --gl-shadow-1: 0 2px 6px rgba(11, 29, 58, 0.06);
+  --gl-shadow-2: 0 10px 24px rgba(11, 29, 58, 0.12);
+
+  /* Motion */
+  --gl-ease-fast: 120ms ease;
+  --gl-ease-panel: 180ms ease;
+
+  /* Z-index scale */
+  --gl-z-base: 0;
+  --gl-z-sticky: 10;
+  --gl-z-bar: 20;
+  --gl-z-dropdown: 30;
+  --gl-z-modal: 40;
+}

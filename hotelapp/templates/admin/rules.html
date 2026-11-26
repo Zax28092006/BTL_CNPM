@@ -1,0 +1,146 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 'a02' %}
+{% set is_emp_admin = current_user is defined and current_user.is_authenticated and (current_user.role is defined and (current_user.role.name == 'ADMIN' if current_user.role.name is defined else current_user.role == 'ADMIN')) %}
+{% set can_view_admin = is_admin_authorized | default(is_emp_admin) %}
+{% set save_rules_url = rules_update_url | default('') %}
+
+{% block title %}Thay đổi quy định (A02) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Quản trị hệ thống{% endblock %}
+
+{% block content %}
+<div class="gl-page-head">
+  <div>
+    <h1 class="mb-1">Quản lý quy định khách sạn</h1>
+    <p class="gl-helper mb-0">Xem và cập nhật danh mục loại phòng, hệ số loại khách, số khách tối đa và tỉ lệ phụ thu.</p>
+  </div>
+</div>
+
+{% if not can_view_admin %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Quản trị viên</div>
+  <p class="mb-2">Bạn chưa có quyền truy cập chức năng cấu hình quy định khách sạn.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  {% if rules_message is defined and rules_message %}
+  <div class="gl-alert gl-alert--success mb-4" role="status">{{ rules_message }}</div>
+  {% elif rules_error is defined and rules_error %}
+  <div class="gl-alert gl-alert--danger mb-4" role="alert">{{ rules_error }}</div>
+  {% endif %}
+
+  <div class="gl-tab-bar" role="tablist" data-gl-tablist aria-label="Nhóm quy định">
+    <button type="button" class="gl-tab-btn is-active" role="tab" aria-selected="true" aria-controls="ruleTabRoomTypes">Loại phòng</button>
+    <button type="button" class="gl-tab-btn" role="tab" aria-selected="false" aria-controls="ruleTabGuestTypes">Loại khách</button>
+    <button type="button" class="gl-tab-btn" role="tab" aria-selected="false" aria-controls="ruleTabMaxGuests">Số khách tối đa</button>
+    <button type="button" class="gl-tab-btn" role="tab" aria-selected="false" aria-controls="ruleTabSurcharge">Phụ thu khách thứ 3</button>
+  </div>
+
+  <div id="a02SaveNotice" class="gl-alert gl-alert--info mb-4" role="status" hidden>
+    Thông số hợp lệ. Chức năng lưu thay đổi quy định hiện đang được cập nhật.
+  </div>
+
+  <section id="ruleTabRoomTypes" role="tabpanel" class="gl-panel mb-4">
+    <h2 class="h3 mb-3">Danh mục loại phòng và đơn giá</h2>
+    {% if room_categories is defined and room_categories %}
+    <div class="gl-table-wrap">
+      <table class="gl-table gl-table--staff">
+        <thead>
+          <tr>
+            <th scope="col">Loại phòng</th>
+            <th scope="col" class="table-numeric">Số lượng</th>
+            <th scope="col" class="table-numeric">Đơn giá</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rc in room_categories %}
+          <tr>
+            <td>{{ rc.name }}</td>
+            <td class="table-numeric gl-tabular">{{ rc.quantity | default('—') }}</td>
+            <td class="table-numeric price-value">{{ rc.price_display | default('—') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {% set empty_title = 'Chưa có dữ liệu loại phòng' %}
+      {% set empty_desc = 'Danh mục loại phòng và đơn giá sẽ hiển thị tại đây khi được thiết lập.' %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  </section>
+
+  <section id="ruleTabGuestTypes" role="tabpanel" class="gl-panel mb-4" hidden>
+    <h2 class="h3 mb-3">Loại khách và hệ số áp dụng</h2>
+    {% if guest_types is defined and guest_types %}
+    <div class="gl-table-wrap">
+      <table class="gl-table gl-table--staff">
+        <thead>
+          <tr>
+            <th scope="col">Loại khách</th>
+            <th scope="col" class="table-numeric">Hệ số</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for gt in guest_types %}
+          <tr>
+            <td>{{ gt.name }}</td>
+            <td class="table-numeric gl-tabular">{{ gt.coefficient }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {% set empty_title = 'Chưa có dữ liệu loại khách' %}
+      {% set empty_desc = 'Bảng hệ số theo loại khách sẽ hiển thị tại đây khi được thiết lập.' %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  </section>
+
+  <section id="ruleTabMaxGuests" role="tabpanel" class="gl-panel mb-4" hidden>
+    <h2 class="h3 mb-3">Số khách tối đa mỗi phòng</h2>
+    {% if rules is defined and rules and rules.max_guests is defined %}
+    <form class="a02-rule-form" method="post" action="{{ save_rules_url }}" novalidate>
+      <div class="mb-3" style="max-width: 280px;">
+        <label class="gl-label" for="ruleMaxGuests">Số khách tối đa</label>
+        <input id="ruleMaxGuests" name="max_guests" type="number" min="1" class="form-control gl-input gl-tabular" value="{{ rules.max_guests }}" required>
+        <p id="ruleMaxGuestsError" class="gl-field-error" hidden></p>
+      </div>
+      <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Lưu thay đổi</button>
+    </form>
+    {% else %}
+      {% set empty_title = 'Chưa có dữ liệu số khách tối đa' %}
+      {% set empty_desc = 'Thông số số khách tối đa mỗi phòng sẽ hiển thị tại đây khi được thiết lập.' %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  </section>
+
+  <section id="ruleTabSurcharge" role="tabpanel" class="gl-panel mb-4" hidden>
+    <h2 class="h3 mb-3">Tỉ lệ phụ thu khách thứ 3</h2>
+    {% if rules is defined and rules and rules.surcharge_rate is defined %}
+    <form class="a02-rule-form" method="post" action="{{ save_rules_url }}" novalidate>
+      <div class="mb-3" style="max-width: 280px;">
+        <label class="gl-label" for="ruleSurchargeRate">Tỉ lệ phụ thu (%)</label>
+        <input id="ruleSurchargeRate" name="surcharge_rate" type="number" min="0" step="0.1" class="form-control gl-input gl-tabular" value="{{ rules.surcharge_rate }}" required>
+        <p id="ruleSurchargeRateError" class="gl-field-error" hidden></p>
+      </div>
+      <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Lưu thay đổi</button>
+    </form>
+    {% else %}
+      {% set empty_title = 'Chưa có dữ liệu tỉ lệ phụ thu' %}
+      {% set empty_desc = 'Thông số phụ thu khách thứ 3 sẽ hiển thị tại đây khi được thiết lập.' %}
+      {% include 'partials/_empty_state.html' %}
+    {% endif %}
+  </section>
+
+  <div class="gl-alert gl-alert--info" role="status">
+    <div class="gl-alert__title">Quy định đặt trước cố định</div>
+    <p class="mb-0">Thời điểm nhận phòng không vượt quá 28 ngày kể từ thời điểm đặt phòng (quy định hiện hành).</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/admin-pages.js') }}"></script>
+{% endblock %}

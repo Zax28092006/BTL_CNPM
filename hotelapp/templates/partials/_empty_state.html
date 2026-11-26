@@ -1,0 +1,8 @@
+{# Reusable empty state partial #}
+<div class="gl-empty-state" role="status">
+  <h2 class="gl-empty-state__title">{{ empty_title | default('Chưa có dữ liệu hiển thị') }}</h2>
+  <p class="gl-empty-state__desc">{{ empty_desc | default('Thông tin sẽ xuất hiện tại đây khi có dữ liệu từ hệ thống.') }}</p>
+  {% if empty_cta_href is defined and empty_cta_href and empty_cta_label is defined and empty_cta_label %}
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ empty_cta_href }}">{{ empty_cta_label }}</a>
+  {% endif %}
+</div>

@@ -1,0 +1,160 @@
+{% extends 'public/base_public.html' %}
+{% from 'partials/_room_tier_sections.html' import render_room_tier_sections %}
+
+{% set active_nav = 'home' %}
+{% set home_url = url_for('index') %}
+{% set home_nav_href = home_url %}
+{% set rooms_href = room_search_url if (room_search_url is defined and room_search_url) else (search_rooms_url if (search_rooms_url is defined and search_rooms_url) else '#homeRooms') %}
+{% set policy_href = policy_page_url if (policy_page_url is defined and policy_page_url) else '' %}
+{% set contact_href = contact_page_url if (contact_page_url is defined and contact_page_url) else '#footerInfo' %}
+{% set rooms_nav_href = rooms_href %}
+{% set policy_nav_href = policy_href if policy_href else '#homeAbout' %}
+{% set contact_nav_href = contact_href %}
+{% set policy_link = policy_href %}
+{% set primary_cta_href = booking_url if (booking_url is defined and booking_url) else rooms_href %}
+{% set footer_extra_class = 'gl-footer--home' %}
+{% set footer_brand_tagline = 'Không gian lưu trú chọn lọc với thiết kế hài hòa và quy trình đón tiếp chu đáo.' %}
+{% set footer_show_stay_info = false %}
+
+{% set display_rooms = featured_rooms if (featured_rooms is defined and featured_rooms) else none %}
+
+{% set default_experiences = [
+  {
+    'image_url': url_for('static', filename='images/hotel-spaces/demo-lobby-reception-01.jpg'),
+    'image_alt': 'Không gian đại sảnh rộng rãi và quầy đón tiếp khách tại The Valentia Hotel & Suites',
+    'title': 'Không gian sảnh & Tiếp đón',
+    'desc': 'Khu vực sảnh chờ thoáng rộng và quầy lễ tân đón tiếp khách lưu trú.',
+    'featured': true
+  },
+  {
+    'image_url': url_for('static', filename='images/rooms/demo-space-lounge-01.jpg'),
+    'image_alt': 'Góc ghế ngồi tiếp khách cạnh cửa sổ lớn tràn ánh sáng tự nhiên',
+    'title': 'Góc tiếp khách chan hòa ánh sáng',
+    'desc': 'Khoảng ngồi thư giãn tách biệt nhẹ nhàng bên khung cửa lớn.',
+    'featured': false
+  },
+  {
+    'image_url': url_for('static', filename='images/rooms/demo-space-interior-02.jpg'),
+    'image_alt': 'Không gian nội thất gỗ trầm kết hợp ánh sáng vàng dịu trong phòng nghỉ',
+    'title': 'Nội thất gỗ trầm thư thái',
+    'desc': 'Gam màu trầm ấm và ánh sáng dịu tạo sự riêng tư cho kỳ nghỉ.',
+    'featured': false
+  }
+] %}
+{% set display_experiences = hotel_experiences if (hotel_experiences is defined and hotel_experiences) else default_experiences %}
+
+{% block title %}The Valentia Hotel &amp; Suites — Trang chủ{% endblock %}
+
+{% block content %}
+<section id="homeHero" class="gl-home-hero" aria-labelledby="homeHeroTitle">
+  <img class="gl-home-hero__bg"
+       src="{{ url_for('static', filename='images/hotel-spaces/demo-lobby-reception-01.jpg') }}"
+       width="1440"
+       height="660"
+       alt="Không gian đại sảnh The Valentia Hotel &amp; Suites">
+  <div class="gl-home-hero__scrim" aria-hidden="true"></div>
+
+  <div class="gl-container gl-container--public gl-home-hero__inner">
+    <div class="gl-home-hero__content">
+      <h1 id="homeHeroTitle" class="gl-home-hero__title">
+        Khoảng lặng tinh tế cho mỗi kỳ lưu trú
+      </h1>
+      <p class="gl-home-hero__lead">
+        Thiết kế cân đối giữa kiến trúc ấm áp và sự phục vụ chu đáo, mang lại cảm giác thư thái từ lúc đón tiếp đến khi trả phòng.
+      </p>
+      <div class="gl-home-hero__actions">
+        <a class="btn btn-primary gl-btn" href="{{ rooms_href }}">Xem phòng và giá</a>
+        <a class="btn gl-btn gl-home-hero__secondary" href="#homeAbout">Về The Valentia</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="homeAbout" class="gl-home-section" aria-labelledby="homeAboutTitle">
+  <div class="gl-container gl-container--public">
+    <div class="row g-4 g-lg-5 align-items-center">
+      <div class="col-12 col-lg-5">
+        <figure class="gl-home-about__frame mb-0">
+          <div class="gl-home-about__stage">
+            <img class="gl-home-about__img"
+                 src="{{ url_for('static', filename='images/rooms/demo-interior-suite-01.jpg') }}"
+                 width="1200"
+                 height="800"
+                 alt="Minh họa không gian nội thất và ánh sáng ấm áp tại khách sạn">
+          </div>
+        </figure>
+      </div>
+
+      <div class="col-12 col-lg-7">
+        <h2 id="homeAboutTitle" class="gl-home-section__title">Kiến trúc hài hòa, trải nghiệm lưu trú chọn lọc</h2>
+        <p class="gl-home-copy">
+          The Valentia Hotel &amp; Suites hướng tới sự chỉn chu trong từng điểm chạm: không gian phòng yên tĩnh, quy trình đón tiếp rõ ràng và dịch vụ lưu trú thuận tiện.
+        </p>
+
+        {% set stay_facts = hotel_stay_info if (hotel_stay_info is defined and hotel_stay_info) else none %}
+        <ul class="gl-home-facts gl-tabular">
+          {% if stay_facts and stay_facts.checkin_time %}
+          <li class="gl-home-facts__item">Nhận phòng từ <strong>{{ stay_facts.checkin_time }}</strong></li>
+          {% endif %}
+          {% if stay_facts and stay_facts.checkout_time %}
+          <li class="gl-home-facts__item">Trả phòng trước <strong>{{ stay_facts.checkout_time }}</strong></li>
+          {% endif %}
+          <li class="gl-home-facts__item">Đặt trước tối đa <strong>28 ngày</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="homeRooms" class="gl-home-section gl-home-section--tinted" aria-labelledby="homeRoomsTitle">
+  <div class="gl-container gl-container--public">
+    <div class="gl-home-section__head">
+      <div>
+        <h2 id="homeRoomsTitle" class="gl-home-section__title mb-2">Không gian lưu trú</h2>
+        <p class="gl-home-section__note mb-0">
+          Chín phòng riêng biệt chia thành ba hạng: Hạng A (Suite gia đình 301–303), Hạng B (Phòng cao cấp 201–203) và Hạng C (Phòng tiêu chuẩn 101–103). Nhấn từng phòng để mở bộ ảnh riêng và thông số chi tiết.
+        </p>
+      </div>
+    </div>
+
+    {{ render_room_tier_sections(display_rooms, 'p01', false, none, '', '', {}, booking_url | default('')) }}
+  </div>
+</section>
+
+<section id="homeExperiences" class="gl-home-section" aria-labelledby="homeExperiencesTitle">
+  <div class="gl-container gl-container--public">
+    <div class="gl-home-section__head">
+      <div>
+        <h2 id="homeExperiencesTitle" class="gl-home-section__title mb-2">Những trải nghiệm tại The Valentia</h2>
+        <p class="gl-home-section__note mb-0">
+          Từng khoảng không gian được thiết kế để hành trình lưu trú diễn ra nhẹ nhàng và liền mạch.
+        </p>
+      </div>
+    </div>
+
+    <div class="gl-exp-gallery">
+      {% for exp in display_experiences %}
+      <figure class="gl-exp-card {{ 'gl-exp-card--featured' if (exp.featured or loop.first) else 'gl-exp-card--stacked' }} mb-0">
+        <img class="gl-exp-card__img"
+             src="{{ exp.image_url }}"
+             alt="{{ exp.image_alt | default(exp.title) }}">
+        <div class="gl-exp-card__scrim" aria-hidden="true"></div>
+        <figcaption class="gl-exp-card__caption">
+          <h3 class="gl-exp-card__title">{{ exp.title }}</h3>
+          {% if exp.desc %}
+          <p class="gl-exp-card__desc mb-0">{{ exp.desc }}</p>
+          {% endif %}
+        </figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% include 'partials/_room_quick_view_modal.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+<script src="{{ url_for('static', filename='js/room-quick-view.js') }}"></script>
+{% endblock %}

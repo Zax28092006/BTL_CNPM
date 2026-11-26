@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  {% include 'partials/_head_assets.html' %}
+  <title>{% block title %}Khu vực khách hàng — The Valentia Hotel &amp; Suites{% endblock %}</title>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{{ 'gl-has-bottom-nav' if show_client_bottom_nav | default(false) else '' }}"
+      data-gl-authenticated="{{ 'true' if (current_user is defined and current_user.is_authenticated) else 'false' }}"
+      data-gl-login-url="{{ url_for('login_view') if url_for else '/login' }}"
+      data-gl-booking-url="{{ booking_url | default('') }}">
+  <a class="gl-skip-link" href="#mainContent">Bỏ qua điều hướng</a>
+
+  {% set active_nav = active_nav if active_nav is defined else '' %}
+  {% set header_container_class = 'gl-container--public' %}
+  {% include 'partials/_site_header.html' %}
+
+  {% if client_subnav_items is defined and client_subnav_items %}
+  <nav class="gl-client-subnav d-none d-sm-block" aria-label="Điều hướng khách hàng">
+    <div class="gl-container gl-container--client">
+      <ul class="gl-client-subnav__list">
+        {% for item in client_subnav_items %}
+        <li>
+          {% if item.href %}
+          <a class="gl-client-subnav__link {{ 'is-active' if active_client_nav == item.key else '' }}"
+             href="{{ item.href }}"
+             {% if active_client_nav == item.key %}aria-current="page"{% endif %}>{{ item.label }}</a>
+          {% else %}
+          <span class="gl-client-subnav__disabled">{{ item.label }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main id="mainContent" class="gl-booking-page" {% block main_attrs %}{% endblock %}>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if show_client_bottom_nav | default(false) %}
+  <nav class="gl-client-bottom-nav" aria-label="Điều hướng nhanh trên di động">
+    <a class="gl-client-bottom-nav__item" href="{{ url_for('index') }}">Trang chủ</a>
+    {% if client_booking_url is defined and client_booking_url %}
+    <a class="gl-client-bottom-nav__item {{ 'is-active' if active_client_nav == 'booking' else '' }}" href="{{ client_booking_url }}">Đặt phòng</a>
+    {% else %}
+    <span class="gl-client-bottom-nav__item">Đặt phòng</span>
+    {% endif %}
+    {% if client_bookings_url is defined and client_bookings_url %}
+    <a class="gl-client-bottom-nav__item {{ 'is-active' if active_client_nav == 'bookings' else '' }}" href="{{ client_bookings_url }}">Đặt phòng của tôi</a>
+    {% else %}
+    <span class="gl-client-bottom-nav__item">Đặt phòng của tôi</span>
+    {% endif %}
+    {% if client_profile_url is defined and client_profile_url %}
+    <a class="gl-client-bottom-nav__item {{ 'is-active' if active_client_nav == 'profile' else '' }}" href="{{ client_profile_url }}">Tài khoản</a>
+    {% else %}
+    <a class="gl-client-bottom-nav__item" href="{{ url_for('login_view') }}">Tài khoản</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+  {% set footer_container_class = 'gl-container--public' %}
+  {% set footer_show_stay_info = false %}
+  {% set policy_link = policy_page_url | default('') %}
+  {% include 'partials/_site_footer.html' %}
+
+  <div id="glToastRegion" class="gl-toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="{{ url_for('static', filename='js/ui-common.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

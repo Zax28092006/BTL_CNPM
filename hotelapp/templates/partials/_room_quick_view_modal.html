@@ -1,0 +1,92 @@
+{# Shared Individual Room Quick-View Modal (P01 & P02) — Private Room Gallery Left (58%) / Specs & Sticky CTA Right (42%) #}
+<div id="roomQuickViewBackdrop"
+     class="gl-qv-backdrop"
+     hidden>
+  <div id="roomQuickViewDialog"
+       class="gl-qv-dialog"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="qvRoomName"
+       tabindex="-1">
+    <button id="qvCloseBtn"
+            type="button"
+            class="gl-qv-close"
+            aria-label="Đóng hộp xem nhanh phòng">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
+    <div class="gl-qv-layout">
+      {# Left Column: Fixed Gallery (58% Desktop) #}
+      <div class="gl-qv-gallery-col">
+        <div id="qvMainStage" class="gl-qv-main-stage">
+          <div id="qvMainPlate" class="gl-qv-main-plate">
+            <img id="qvMainImg" class="gl-qv-main-img" alt="" hidden>
+          </div>
+          <div id="qvImgFallback" class="gl-qv-img-fallback" hidden>
+            Hình ảnh phòng hiện chưa tải được
+          </div>
+
+          <button id="qvPrevBtn"
+                  type="button"
+                  class="gl-qv-arrow gl-qv-arrow--prev"
+                  aria-label="Ảnh trước">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+
+          <button id="qvNextBtn"
+                  type="button"
+                  class="gl-qv-arrow gl-qv-arrow--next"
+                  aria-label="Ảnh tiếp theo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+
+          <div id="qvCounter" class="gl-qv-counter gl-tabular" aria-live="polite" hidden>1 / 1</div>
+          <div id="qvDots" class="gl-qv-dots" role="tablist" aria-label="Chọn ảnh theo chấm chỉ báo"></div>
+        </div>
+
+        <p id="qvGalleryLabel" class="gl-qv-gallery-label" hidden></p>
+        <div id="qvThumbs" class="gl-qv-thumbs" role="group" aria-label="Gallery ảnh của phòng"></div>
+      </div>
+
+      {# Right Column: Independently Scrollable Info + Sticky Footer (42% Desktop) #}
+      <div class="gl-qv-info-col">
+        <div id="qvInfoScroll" class="gl-qv-info-scroll">
+          <div class="gl-qv-head">
+            <span id="qvRoomTier" class="gl-home-room-card__tier" hidden></span>
+            <h2 id="qvRoomName" class="gl-qv-title">—</h2>
+            <p id="qvAvailabilityWrap" class="mb-2" hidden>
+              <span id="qvAvailabilityChip" class="gl-chip gl-chip--neutral"></span>
+            </p>
+          </div>
+
+          <ul id="qvFeatureChips" class="gl-qv-feature-list" aria-label="Điểm nổi bật" hidden></ul>
+
+          <dl id="qvSpecList" class="gl-qv-spec-list" hidden></dl>
+
+          <p id="qvRoomDesc" class="gl-qv-desc" hidden></p>
+
+          <div id="qvAmenityGroups" class="gl-qv-amenities" hidden></div>
+        </div>
+
+        <div class="gl-qv-footer">
+          <div id="qvPriceBox" class="gl-qv-price-box">
+            <div id="qvPriceRender"></div>
+            <span id="qvPriceNote" class="gl-qv-price-note"></span>
+          </div>
+
+          <div class="gl-qv-footer-actions">
+            <a id="qvDetailBtn" class="btn gl-btn gl-btn-secondary gl-btn--sm" href="/">Xem chi tiết</a>
+            <button id="qvBookBtn" type="button" class="btn btn-primary gl-btn gl-btn--sm">Đặt phòng này</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

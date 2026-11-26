@@ -1,0 +1,141 @@
+{% extends 'staff/base_staff.html' %}
+
+{% set active_staff_nav = 'a03' %}
+{% set is_emp_admin = current_user is defined and current_user.is_authenticated and (current_user.role is defined and (current_user.role.name == 'ADMIN' if current_user.role.name is defined else current_user.role == 'ADMIN')) %}
+{% set can_view_admin = is_admin_authorized | default(is_emp_admin) %}
+{% set report_url = revenue_report_url | default('') %}
+
+{% block title %}Báo cáo doanh thu theo tháng (A03) — The Valentia Hotel &amp; Suites{% endblock %}
+{% block topbar_area %}Quản trị hệ thống{% endblock %}
+
+{% block content %}
+<div class="gl-page-head">
+  <div>
+    <h1 class="mb-1">Báo cáo doanh thu theo tháng</h1>
+    <p class="gl-helper mb-0">Tổng hợp doanh thu, số lượt thuê và tỉ lệ đóng góp theo từng loại phòng.</p>
+  </div>
+  {% if can_view_admin and revenue_rows is defined and revenue_rows %}
+  <button type="button" class="gl-btn gl-btn--sm gl-btn-secondary gl-no-print" data-gl-print-trigger>In báo cáo</button>
+  {% endif %}
+</div>
+
+{% if not can_view_admin %}
+<div class="gl-alert gl-alert--info" role="status">
+  <div class="gl-alert__title">Yêu cầu quyền Quản trị viên</div>
+  <p class="mb-2">Vui lòng đăng nhập bằng tài khoản Quản trị viên để xem báo cáo doanh thu.</p>
+  <a class="btn btn-primary gl-btn gl-btn--sm" href="{{ url_for('login_view') }}">Đến trang đăng nhập</a>
+</div>
+{% else %}
+  <form id="a03ReportForm" class="gl-toolbar row g-2 align-items-end gl-no-print" method="get" action="{{ report_url }}" novalidate>
+    <div class="col-6 col-sm-4 col-md-2">
+      <label class="gl-label" for="a03Month">Tháng</label>
+      <select id="a03Month" name="month" class="form-select gl-select gl-tabular">
+        {% for m in range(1, 13) %}
+        <option value="{{ m }}" {{ 'selected' if (selected_month | default(0) | int) == m else '' }}>Tháng {{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-sm-4 col-md-2">
+      <label class="gl-label" for="a03Year">Năm</label>
+      <input id="a03Year" name="year" type="number" min="2020" max="2100" class="form-control gl-input gl-tabular" value="{{ selected_year | default('') }}" placeholder="YYYY">
+      <p id="a03YearError" class="gl-field-error" hidden></p>
+    </div>
+    <div class="col-12 col-sm-auto">
+      <button type="submit" class="btn btn-primary gl-btn gl-btn--sm">Xem báo cáo</button>
+    </div>
+  </form>
+
+  <div id="a03FilterNotice" class="gl-alert gl-alert--info mb-4 gl-no-print" role="status" hidden>
+    Chức năng tra cứu báo cáo doanh thu theo kỳ hiện đang được cập nhật.
+  </div>
+
+  {% if report_error is defined and report_error %}
+  <div class="gl-alert gl-alert--danger" role="alert">{{ report_error }}</div>
+  {% elif revenue_rows is defined and revenue_rows %}
+    {% if revenue_summary is defined and revenue_summary %}
+    <div class="gl-kpi-grid">
+      {% if revenue_summary.total_revenue_display %}
+      <div class="gl-kpi-box">
+        <div class="gl-kpi-box__label">Tổng doanh thu</div>
+        <div class="gl-kpi-box__value price-value">{{ revenue_summary.total_revenue_display }}</div>
+      </div>
+      {% endif %}
+      {% if revenue_summary.total_rentals is defined %}
+      <div class="gl-kpi-box">
+        <div class="gl-kpi-box__label">Tổng lượt thuê</div>
+        <div class="gl-kpi-box__value gl-tabular">{{ revenue_summary.total_rentals }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="row g-4 align-items-start">
+      <div class="col-12 col-xl-7">
+        <div class="gl-table-wrap">
+          <table class="gl-table gl-table--staff">
+            <thead>
+              <tr>
+                <th scope="col">STT</th>
+                <th scope="col">Loại phòng</th>
+                <th scope="col" class="table-numeric">Doanh thu</th>
+                <th scope="col" class="table-numeric">Số lượt thuê</th>
+                <th scope="col" class="table-numeric">Tỉ lệ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in revenue_rows %}
+              <tr>
+                <td class="gl-tabular">{{ loop.index }}</td>
+                <td>{{ row.room_type }}</td>
+                <td class="table-numeric price-value">{{ row.revenue_display }}</td>
+                <td class="table-numeric gl-tabular">{{ row.rentals_count }}</td>
+                <td class="table-numeric gl-tabular">{{ row.ratio_display }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            {% if revenue_summary is defined and revenue_summary %}
+            <tfoot>
+              <tr>
+                <th scope="row" colspan="2">Tổng cộng</th>
+                <td class="table-numeric price-value fw-bold">{{ revenue_summary.total_revenue_display | default('—') }}</td>
+                <td class="table-numeric gl-tabular fw-bold">{{ revenue_summary.total_rentals | default('—') }}</td>
+                <td class="table-numeric gl-tabular fw-bold">{{ revenue_summary.total_ratio_display | default('100%') }}</td>
+              </tr>
+            </tfoot>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+
+      <div class="col-12 col-xl-5">
+        <div class="gl-panel">
+          <h2 class="h3 mb-3">Biểu đồ doanh thu theo loại phòng</h2>
+          <div class="gl-chart-stage">
+            <canvas id="monthlyRevenueChart"
+                    aria-label="Biểu đồ cột đứng doanh thu theo loại phòng"
+                    data-gl-chart-canvas
+                    data-gl-axis="x"
+                    data-gl-dataset-label="Doanh thu (VNĐ)"
+                    data-gl-labels='{{ revenue_chart_labels | default([]) | tojson }}'
+                    data-gl-values='{{ revenue_chart_values | default([]) | tojson }}'></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    {% set empty_title = 'Chưa có dữ liệu doanh thu' %}
+    {% set empty_desc = 'Chưa có dữ liệu doanh thu trong kỳ được chọn.' %}
+    {% include 'partials/_empty_state.html' %}
+  {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+  {% if can_view_admin %}
+  <script src="{{ url_for('static', filename='js/admin-pages.js') }}"></script>
+  {% endif %}
+  {% if can_view_admin and revenue_rows is defined and revenue_rows %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  <script src="{{ url_for('static', filename='js/admin-charts.js') }}"></script>
+  {% endif %}
+{% endblock %}

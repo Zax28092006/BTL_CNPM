@@ -1,0 +1,152 @@
+/* The Valentia Hotel & Suites — Bootstrap 5.3.x Token Bridge & Scoped Overrides */
+
+:root {
+  --bs-body-bg: var(--gl-paper);
+  --bs-body-bg-rgb: var(--gl-paper-rgb);
+  --bs-body-color: var(--gl-ink);
+  --bs-body-color-rgb: var(--gl-ink-rgb);
+  --bs-secondary-color: var(--gl-muted);
+  --bs-secondary-color-rgb: 91, 101, 120;
+  --bs-tertiary-color: var(--gl-muted);
+  --bs-emphasis-color: var(--gl-navy-900);
+  --bs-emphasis-color-rgb: var(--gl-navy-rgb);
+  --bs-heading-color: var(--gl-navy-900);
+
+  --bs-secondary-bg: var(--gl-paper-2);
+  --bs-secondary-bg-rgb: 243, 239, 228;
+  --bs-tertiary-bg: var(--gl-paper-3);
+  --bs-tertiary-bg-rgb: 233, 227, 211;
+
+  --bs-highlight-color: var(--gl-ink);
+  --bs-highlight-bg: var(--gl-gold-soft);
+
+  --bs-border-color: var(--gl-border);
+  --bs-border-color-translucent: rgba(var(--gl-navy-rgb), 0.14);
+
+  --bs-primary: var(--gl-gold);
+  --bs-primary-rgb: var(--gl-gold-rgb);
+  --bs-link-color: var(--gl-navy-700);
+  --bs-link-color-rgb: var(--gl-navy-700-rgb);
+  --bs-link-hover-color: var(--gl-navy-900);
+  --bs-link-hover-color-rgb: var(--gl-navy-rgb);
+
+  --bs-success: var(--gl-success);
+  --bs-success-rgb: var(--gl-success-rgb);
+  --bs-warning: var(--gl-warning);
+  --bs-warning-rgb: var(--gl-warning-rgb);
+  --bs-danger: var(--gl-danger);
+  --bs-danger-rgb: var(--gl-danger-rgb);
+
+  --bs-focus-ring-color: rgba(var(--gl-focus-rgb), 0.35);
+  --bs-focus-ring-width: 2px;
+
+  --bs-form-invalid-color: var(--gl-danger);
+  --bs-form-invalid-border-color: var(--gl-danger);
+  --bs-form-valid-color: var(--gl-success);
+  --bs-form-valid-border-color: var(--gl-success);
+
+  --bs-border-radius: var(--gl-radius-md);
+  --bs-border-radius-sm: var(--gl-radius-sm);
+  --bs-border-radius-lg: var(--gl-radius-lg);
+
+  --bs-font-sans-serif: var(--font-body);
+  --bs-body-font-size: 16px;
+  --bs-body-line-height: 1.6;
+
+  --bs-modal-bg: var(--gl-paper);
+  --bs-modal-border-color: var(--gl-rule);
+  --bs-modal-border-radius: var(--gl-radius-lg);
+  --bs-offcanvas-bg: var(--gl-navy-900);
+  --bs-offcanvas-border-color: rgba(var(--gl-gold-rgb), 0.35);
+  --bs-dropdown-bg: var(--gl-paper);
+  --bs-dropdown-border-color: var(--gl-rule);
+  --bs-dropdown-link-hover-bg: var(--gl-paper-2);
+  --bs-dropdown-link-active-bg: var(--gl-gold-soft);
+  --bs-table-border-color: var(--gl-rule);
+  --bs-table-hover-bg: var(--gl-paper-2);
+  --bs-pagination-color: var(--gl-navy-700);
+  --bs-pagination-hover-bg: var(--gl-paper-2);
+  --bs-pagination-active-bg: var(--gl-navy-900);
+  --bs-pagination-active-border-color: var(--gl-navy-900);
+}
+
+/* =========================================================
+   16.3 — Bốn ghi đè component bắt buộc
+   (Chỉ xử lý thuộc tính biên dịch; không lặp box-shadow ở đây)
+   ========================================================= */
+
+/* 1. .btn-primary: Navy trên nền Gold (7.98:1 WCAG AAA) */
+.btn-primary {
+  --bs-btn-color: var(--gl-navy-900);
+  --bs-btn-bg: var(--gl-gold);
+  --bs-btn-border-color: var(--gl-gold-border);
+  --bs-btn-hover-color: var(--gl-navy-900);
+  --bs-btn-hover-bg: var(--gl-gold-hover);
+  --bs-btn-hover-border-color: var(--gl-gold-ink);
+  --bs-btn-active-color: var(--gl-navy-900);
+  --bs-btn-active-bg: var(--gl-gold-hover);
+  --bs-btn-active-border-color: var(--gl-navy-900);
+  --bs-btn-disabled-color: var(--gl-muted);
+  --bs-btn-disabled-bg: var(--gl-paper-2);
+  --bs-btn-disabled-border-color: var(--gl-rule);
+  font-weight: 600;
+}
+
+/* 2. .form-control:focus (chỉ đặt border-color; box-shadow xử lý ở 16.4) */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--gl-focus);
+  background-color: var(--gl-paper);
+}
+
+/* 3. .form-check-input:checked */
+.form-check-input {
+  border-color: var(--gl-border);
+  background-color: var(--gl-paper);
+}
+
+.form-check-input:checked {
+  background-color: var(--gl-navy-900);
+  border-color: var(--gl-navy-900);
+}
+
+/* 4. Ô bảng: padding .5rem */
+.table > :not(caption) > * > * {
+  padding: 0.5rem;
+}
+
+/* =========================================================
+   16.4 — Nhóm focus/accessibility toàn cục (nguồn duy nhất)
+   ========================================================= */
+
+:focus-visible {
+  outline: 2px solid var(--gl-focus);
+  outline-offset: 2px;
+}
+
+.gl-on-dark :focus-visible,
+.gl-site-header :focus-visible,
+.gl-offcanvas :focus-visible,
+.gl-footer :focus-visible {
+  outline-color: var(--gl-paper);
+}
+
+.btn:focus,
+.btn:focus-visible,
+.btn-close:focus,
+.btn-close:focus-visible,
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus,
+.page-link:focus {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,143 @@
+{# Shared Individual Room Card (P01 & P02) — strictly 1 private cover & 1 private gallery per physical room #}
+{% from 'partials/_price_display.html' import render_price_block %}
+{% macro render_room_card(card, mode='p01', search_performed=false, search_summary=none, current_checkin='', current_checkout='', status_map={}, booking_url_fallback='') %}
+{% set is_reference = card.is_reference | default(false) %}
+{% set raw_state_key = (card.availability_state | default(card.availability_label | default(''))) | string | lower | trim %}
+{% set mapped_status = status_map.get(raw_state_key) if status_map else none %}
+{% set badge_label = mapped_status.label if mapped_status else (card.availability_label | default('')) %}
+{% set badge_cls = mapped_status.cls if mapped_status else (card.availability_chip_class | default('gl-chip--neutral')) %}
+{% set is_bookable = (not is_reference) and (raw_state_key not in ['full', 'fully_booked', 'unavailable', 'maintenance']) %}
+{% set night_count = search_summary.nights if (search_summary is defined and search_summary and search_summary.nights) else none %}
+{% set est_total = card.estimated_total if (card.estimated_total is defined and card.estimated_total is not none) else (card.subtotal if (card.subtotal is defined and card.subtotal is not none) else none) %}
+{% set room_gallery = card.images if (card.images is defined and card.images) else ([{'url': card.image_url, 'alt': card.image_alt | default(card.name)}] if card.image_url else []) %}
+{% set cover_url = card.image_url if (card.image_url is defined and card.image_url) else (room_gallery[0].url if room_gallery else '') %}
+{% set has_price = (mode == 'p02' and not is_reference and ((card.original_price is defined and card.original_price is not none) or (card.list_price is defined and card.list_price is not none) or (card.price is defined and card.price is not none))) %}
+{% set effective_booking_url = card.booking_url if (card.booking_url is defined and card.booking_url) else (booking_url_fallback if not is_reference else '') %}
+{% set modal_payload = {
+  'id': card.id if (card.id is defined and card.id is not none) else '',
+  'room_number': card.room_number | default(''),
+  'tier_key': card.tier_key | default(''),
+  'type_name': card.type_name | default(''),
+  'name': card.name | default('Phòng'),
+  'tier_label': card.tier_label | default(''),
+  'segment_label': card.segment_label | default(''),
+  'is_reference': is_reference,
+  'has_verified_room_gallery': true,
+  'gallery_caption': card.gallery_caption | default(''),
+  'initial_index': 0,
+  'description': card.description | default(''),
+  'size': card.size if (card.size is defined) else none,
+  'guest_count': card.guest_count if (card.guest_count is defined) else none,
+  'bed_type': card.bed_type | default(''),
+  'floor': card.floor if (card.floor is defined and not is_reference) else none,
+  'price': card.price if (not is_reference and card.price is defined and card.price is not none) else none,
+  'original_price': card.original_price if (not is_reference and card.original_price is defined and card.original_price is not none) else none,
+  'list_price': card.list_price if (not is_reference and card.list_price is defined and card.list_price is not none) else none,
+  'final_price': card.final_price if (not is_reference and card.final_price is defined and card.final_price is not none) else none,
+  'discounted_price': card.discounted_price if (not is_reference and card.discounted_price is defined and card.discounted_price is not none) else none,
+  'discount_percent': card.discount_percent if (not is_reference and card.discount_percent is defined and card.discount_percent is not none) else none,
+  'promotion_status': card.promotion_status | default('') if (not is_reference) else '',
+  'promotion_name': card.promotion_name | default('') if (not is_reference) else '',
+  'promotion_condition': card.promotion_condition | default('') if (not is_reference) else '',
+  'savings_amount': card.savings_amount if (not is_reference and card.savings_amount is defined and card.savings_amount is not none) else none,
+  'promotion': card.promotion if (not is_reference and card.promotion is defined and card.promotion is mapping) else none,
+  'price_display': card.price_display | default('') if (not is_reference) else '',
+  'base_guest_note': card.base_guest_note | default(''),
+  'availability_state': raw_state_key if (not is_reference and search_performed) else '',
+  'availability_label': badge_label if (not is_reference and search_performed and badge_label) else '',
+  'availability_chip_class': badge_cls if (not is_reference and search_performed and badge_cls) else 'gl-chip--neutral',
+  'features': card.features | default([]),
+  'bathroom_amenities': card.bathroom_amenities | default([]),
+  'view_amenities': card.view_amenities | default([]),
+  'room_amenities': card.room_amenities | default([]),
+  'amenity_groups': card.amenity_groups | default([]),
+  'amenities': card.amenities | default([]),
+  'images': room_gallery,
+  'detail_url': card.detail_url | default(''),
+  'booking_url': effective_booking_url
+} %}
+<div class="col">
+  <article class="gl-home-room-card gl-home-room-card--clickable {{ 'gl-search-card' if mode == 'p02' else '' }}"
+           role="button"
+           tabindex="0"
+           data-gl-quick-view
+           data-gl-room-id="{{ card.id if (card.id is defined and card.id) else card.room_number }}"
+           data-gl-room='{{ modal_payload | tojson }}'
+           aria-label="Xem nhanh {{ card.name }}{{ (' — ' ~ card.type_name) if card.type_name else '' }}">
+    <div class="gl-home-room-card__media">
+      {% if cover_url %}
+        <img src="{{ cover_url }}" alt="{{ card.image_alt | default(card.name) }}">
+      {% else %}
+      <div class="gl-home-room-card__placeholder">Hình ảnh đang chuẩn bị</div>
+      {% endif %}
+      {% if (room_gallery | length) > 0 %}
+      <span class="gl-card-photo-count gl-tabular">{{ room_gallery | length }} ảnh</span>
+      {% endif %}
+      <span class="gl-card-quickview-pill">Xem nhanh</span>
+    </div>
+
+    <div class="gl-home-room-card__body">
+      {% if card.tier_label or card.type_name %}
+      <span class="gl-home-room-card__tier">
+        {{ card.tier_label }}{% if card.type_name %} · {{ card.type_name }}{% endif %}
+      </span>
+      {% endif %}
+      <h4 class="gl-home-room-card__name">{{ card.name }}</h4>
+
+      {% if not is_reference and mode == 'p02' and search_performed and badge_label %}
+      <p class="mb-2">
+        <span class="gl-chip {{ badge_cls }}">{{ badge_label }}</span>
+      </p>
+      {% endif %}
+
+      {% if card.description %}
+      <p class="gl-home-room-card__desc">{{ card.description }}</p>
+      {% endif %}
+
+      {% if card.size or card.guest_count or card.bed_type or card.highlight %}
+      <ul class="gl-home-room-card__specs gl-tabular">
+        {% if card.size %}<li>Diện tích: {{ card.size }} m²</li>{% endif %}
+        {% if card.guest_count %}<li>Sức chứa: tối đa {{ card.guest_count }} khách</li>{% endif %}
+        {% if card.bed_type %}<li>Loại giường: {{ card.bed_type }}</li>{% endif %}
+        {% if card.highlight %}<li>{{ card.highlight }}</li>{% endif %}
+      </ul>
+      {% endif %}
+
+      {% if mode == 'p02' %}
+        {{ render_price_block(card, variant='card', show_savings=true, show_promo_label=true, missing_text='Liên hệ lễ tân để kiểm tra giá phòng theo ngày.') }}
+        {% if has_price %}
+        <p class="gl-helper mt-1 mb-1">{{ card.base_guest_note | default('Áp dụng cho 2 khách cơ bản') }}</p>
+        {% endif %}
+        {% if card.date_rate_note is defined and card.date_rate_note %}
+        <p class="gl-price-meta mb-1">{{ card.date_rate_note }}</p>
+        {% endif %}
+
+        {% if not is_reference and search_performed and est_total is not none and night_count %}
+        <p class="gl-search-card__estimate gl-tabular">
+          Tạm tính <span class="gl-search-card__est-nights" data-checkin="{{ current_checkin }}" data-checkout="{{ current_checkout }}">{{ night_count }} đêm</span>:
+          <strong class="price-value">{{ "{:,.0f}".format(est_total).replace(",", ".") }} VNĐ</strong>
+        </p>
+        {% endif %}
+
+        {% if card.detail_url or (effective_booking_url and is_bookable) %}
+        <div class="gl-search-card__actions d-grid gap-2">
+          {% if card.detail_url %}
+          <a class="btn gl-btn gl-btn-secondary gl-btn--sm w-100"
+             data-gl-card-action
+             data-gl-preserve-query
+             href="{{ card.detail_url }}">Xem chi tiết</a>
+          {% endif %}
+          {% if effective_booking_url and is_bookable %}
+          <a class="btn btn-primary gl-btn gl-btn--sm w-100"
+             data-gl-card-action
+             data-gl-preserve-query
+             data-gl-book-cta
+             href="{{ effective_booking_url }}">Đặt phòng</a>
+          {% endif %}
+        </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </article>
+</div>
+{% endmacro %}
